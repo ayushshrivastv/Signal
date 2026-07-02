@@ -267,7 +267,9 @@ export function signalWidgetHtml(): string {
     </main>
 
     <script>
-      let pulse = window.openai?.toolOutput ?? null;
+      let pulse = null;
+      let rpcId = 0;
+      const pendingRequests = new Map();
 
       const els = {
         homeName: document.getElementById("homeName"),
@@ -345,13 +347,68 @@ export function signalWidgetHtml(): string {
         }
       }
 
-      async function callTool(name, args) {
-        if (!window.openai?.callTool) {
-          throw new Error("This widget must run inside a ChatGPT Apps host.");
+      function updateFromResponse(response) {
+        const nextPulse = response?.structuredContent ?? response;
+        if (nextPulse?.matchState) {
+          render(nextPulse);
         }
-        const response = await window.openai.callTool(name, args);
-        if (response?.structuredContent) {
-          render(response.structuredContent);
+      }
+
+      function rpcNotify(method, params) {
+        window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+      }
+
+      function rpcRequest(method, params) {
+        return new Promise((resolve, reject) => {
+          const id = ++rpcId;
+          pendingRequests.set(id, { resolve, reject });
+          window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+        });
+      }
+
+      window.addEventListener(
+        "message",
+        (event) => {
+          if (event.source !== window.parent) return;
+          const message = event.data;
+          if (!message || message.jsonrpc !== "2.0") return;
+
+          if (typeof message.id === "number") {
+            const pending = pendingRequests.get(message.id);
+            if (!pending) return;
+            pendingRequests.delete(message.id);
+            if (message.error) {
+              pending.reject(message.error);
+              return;
+            }
+            pending.resolve(message.result);
+            return;
+          }
+
+          if (message.method === "ui/notifications/tool-result") {
+            updateFromResponse(message.params);
+          }
+        },
+        { passive: true },
+      );
+
+      const bridgeReady = (async () => {
+        await rpcRequest("ui/initialize", {
+          appInfo: { name: "signal-widget", version: "0.1.0" },
+          appCapabilities: {},
+          protocolVersion: "2026-01-26",
+        });
+        rpcNotify("ui/notifications/initialized", {});
+      })();
+
+      async function callTool(name, args) {
+        await bridgeReady;
+        const response = await rpcRequest("tools/call", {
+          name,
+          arguments: args,
+        });
+        updateFromResponse(response);
+        return response;
         }
       }
 
@@ -375,7 +432,7 @@ export function signalWidgetHtml(): string {
       });
       els.speakButton.addEventListener("click", async () => {
         if (!pulse?.sessionId) return;
-        const response = await window.openai?.callTool?.("get_spoken_summary", {
+        const response = await callTool("get_spoken_summary", {
           sessionId: pulse.sessionId,
         });
         const script = response?.structuredContent?.script;
@@ -385,18 +442,9 @@ export function signalWidgetHtml(): string {
         }
       });
 
-      window.addEventListener(
-        "openai:set_globals",
-        (event) => {
-          render(event.detail?.globals?.toolOutput ?? window.openai?.toolOutput);
-        },
-        { passive: true },
-      );
-
       render(pulse);
     </script>
   </body>
 </html>
   `.trim();
 }
-

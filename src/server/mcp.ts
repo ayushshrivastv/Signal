@@ -22,20 +22,86 @@ const MCP_PATH = "/mcp";
 const CORS_HEADERS =
   "authorization, content-type, mcp-session-id, openai-conversation-id, openai-ephemeral-user-id, openai-locale, x-openai-conversation-id, x-openai-ephemeral-user-id, x-openai-locale";
 
+const eventSchema = z.object({
+  id: z.string(),
+  minute: z.number(),
+  type: z.string(),
+  team: z.enum(["home", "away"]).optional(),
+  description: z.string(),
+});
+
+const oddsSchema = z
+  .object({
+    timestamp: z.string(),
+    market: z.string(),
+    homeProbability: z.number().optional(),
+    drawProbability: z.number().optional(),
+    awayProbability: z.number().optional(),
+    homePrice: z.number().optional(),
+    drawPrice: z.number().optional(),
+    awayPrice: z.number().optional(),
+  })
+  .nullable();
+
+const matchStateSchema = z.object({
+  fixtureId: z.string(),
+  homeTeam: z.string(),
+  awayTeam: z.string(),
+  minute: z.number(),
+  phase: z.string(),
+  score: z.object({
+    home: z.number(),
+    away: z.number(),
+  }),
+  recentEvents: z.array(eventSchema),
+  latestOdds: oddsSchema,
+  previousOdds: oddsSchema,
+  mode: z.enum(["live", "replay"]),
+});
+
+const resolutionRuleSchema = z.object({
+  type: z.string(),
+  team: z.enum(["home", "away"]).optional(),
+  deadlineMinute: z.number().optional(),
+  signals: z.array(z.string()).optional(),
+  minProbabilityMove: z.number().optional(),
+  windowMinutes: z.number().optional(),
+  maxProbabilityMove: z.number().optional(),
+  startMinute: z.number().optional(),
+});
+
+const challengeSchema = z.object({
+  id: z.string(),
+  fixtureId: z.string(),
+  status: z.string(),
+  context: z.string(),
+  question: z.string(),
+  options: z.array(z.string()),
+  userAnswer: z.string().optional(),
+  resolutionRule: resolutionRuleSchema,
+  createdAtMinute: z.number(),
+  deadlineMinute: z.number().optional(),
+  answerByMinute: z.number().optional(),
+});
+
+const resultSchema = z.object({
+  resolved: z.boolean(),
+  correct: z.boolean().optional(),
+  result: z.string().optional(),
+  matchedEvent: eventSchema.optional(),
+});
+
 const pulseOutputSchema = {
   sessionId: z.string(),
-  matchState: z.object({}).passthrough(),
+  matchState: matchStateSchema,
   marketExplanation: z.string(),
-  challenge: z.object({}).passthrough(),
+  challenge: challengeSchema,
   streak: z.number(),
-  lastResult: z.object({}).passthrough().optional(),
+  lastResult: resultSchema.optional(),
 };
 
 export function createSignalMcpServer(): McpServer {
-  const server = new McpServer(
-    { name: "signal", version: "0.1.0" },
-    { capabilities: { tools: {}, resources: {} } },
-  );
+  const server = new McpServer({ name: "signal", version: "0.1.0" });
 
   registerAppResource(
     server,
