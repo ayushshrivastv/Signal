@@ -193,7 +193,7 @@ export function createSignalMcpServer(): McpServer {
       },
       outputSchema: pulseOutputSchema,
       annotations: {
-        readOnlyHint: false,
+        readOnlyHint: true,
         openWorldHint: false,
         destructiveHint: false,
       },
@@ -258,7 +258,7 @@ export function createSignalMcpServer(): McpServer {
       },
       outputSchema: pulseOutputSchema,
       annotations: {
-        readOnlyHint: false,
+        readOnlyHint: true,
         openWorldHint: false,
         destructiveHint: false,
       },
@@ -284,7 +284,7 @@ export function createSignalMcpServer(): McpServer {
       },
       outputSchema: pulseOutputSchema,
       annotations: {
-        readOnlyHint: false,
+        readOnlyHint: true,
         openWorldHint: false,
         destructiveHint: false,
       },
