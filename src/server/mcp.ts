@@ -120,6 +120,7 @@ export function createSignalMcpServer(): McpServer {
           _meta: {
             ui: {
               prefersBorder: true,
+              domain: process.env.APP_PUBLIC_URL ?? "https://signal-an6w.onrender.com",
               csp: {
                 connectDomains: [],
                 resourceDomains: [],
