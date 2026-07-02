@@ -21,6 +21,7 @@ import { SIGNAL_WIDGET_URI, signalWidgetHtml } from "./widget.js";
 const MCP_PATH = "/mcp";
 const CORS_HEADERS =
   "authorization, content-type, mcp-session-id, openai-conversation-id, openai-ephemeral-user-id, openai-locale, x-openai-conversation-id, x-openai-ephemeral-user-id, x-openai-locale";
+const recentRequests: Array<Record<string, string | undefined>> = [];
 
 const eventSchema = z.object({
   id: z.string(),
@@ -352,6 +353,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
 
   console.log(`${req.method ?? "UNKNOWN"} ${url.pathname}`);
+  recordRequest(req, url);
 
   if (req.method === "OPTIONS") {
     writeCors(res, 204);
@@ -381,6 +383,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       fixtureId: "replay-england-croatia",
       mode: "replay",
       mcp: `${process.env.APP_PUBLIC_URL ?? "http://localhost:8787"}${MCP_PATH}`,
+    });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/debug/requests") {
+    writeJson(res, 200, {
+      now: new Date().toISOString(),
+      recentRequests,
     });
     return;
   }
@@ -436,4 +446,24 @@ function writeJson(res: ServerResponse, status: number, value: unknown): void {
     "Access-Control-Allow-Origin": "*",
   });
   res.end(JSON.stringify(value, null, 2));
+}
+
+function recordRequest(req: IncomingMessage, url: URL): void {
+  recentRequests.push({
+    at: new Date().toISOString(),
+    method: req.method,
+    path: url.pathname,
+    query: url.search || undefined,
+    accept: header(req, "accept"),
+    origin: header(req, "origin"),
+    userAgent: header(req, "user-agent"),
+    accessControlRequestHeaders: header(req, "access-control-request-headers"),
+  });
+
+  while (recentRequests.length > 80) recentRequests.shift();
+}
+
+function header(req: IncomingMessage, name: string): string | undefined {
+  const value = req.headers[name];
+  return Array.isArray(value) ? value.join(", ") : value;
 }
