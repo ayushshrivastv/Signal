@@ -361,6 +361,18 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
+  const MCP_METHODS = new Set(["POST", "GET", "DELETE"]);
+  const shouldHandleMcp =
+    url.pathname === MCP_PATH ||
+    (url.pathname === "/" && req.method === "POST") ||
+    (url.pathname === "/" && req.method === "GET" && acceptsEventStream(req)) ||
+    (url.pathname === "/" && req.method === "DELETE");
+
+  if (url.pathname === "/" && shouldHandleMcp && req.method && MCP_METHODS.has(req.method)) {
+    await handleMcpRequest(req, res);
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/") {
     writeJson(res, 200, {
       name: "Signal",
@@ -395,29 +407,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
-  const MCP_METHODS = new Set(["POST", "GET", "DELETE"]);
   if (url.pathname === MCP_PATH && req.method && MCP_METHODS.has(req.method)) {
-    setCorsHeaders(res);
-    const server = createSignalMcpServer();
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-      enableJsonResponse: true,
-    });
-
-    res.on("close", () => {
-      transport.close();
-      server.close();
-    });
-
-    try {
-      await server.connect(transport);
-      await transport.handleRequest(req, res);
-    } catch (error) {
-      console.error("Error handling MCP request:", error);
-      if (!res.headersSent) {
-        res.writeHead(500).end("Internal server error");
-      }
-    }
+    await handleMcpRequest(req, res);
     return;
   }
 
@@ -446,6 +437,35 @@ function writeJson(res: ServerResponse, status: number, value: unknown): void {
     "Access-Control-Allow-Origin": "*",
   });
   res.end(JSON.stringify(value, null, 2));
+}
+
+async function handleMcpRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  setCorsHeaders(res);
+  const server = createSignalMcpServer();
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
+
+  res.on("close", () => {
+    transport.close();
+    server.close();
+  });
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res);
+  } catch (error) {
+    console.error("Error handling MCP request:", error);
+    if (!res.headersSent) {
+      res.writeHead(500).end("Internal server error");
+    }
+  }
+}
+
+function acceptsEventStream(req: IncomingMessage): boolean {
+  const accept = header(req, "accept") ?? "";
+  return accept.includes("text/event-stream") || accept.includes("application/json");
 }
 
 function recordRequest(req: IncomingMessage, url: URL): void {
