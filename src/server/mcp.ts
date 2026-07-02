@@ -22,6 +22,7 @@ const MCP_PATH = "/mcp";
 const CORS_HEADERS =
   "authorization, content-type, mcp-session-id, openai-conversation-id, openai-ephemeral-user-id, openai-locale, x-openai-conversation-id, x-openai-ephemeral-user-id, x-openai-locale";
 const recentRequests: Array<Record<string, string | undefined>> = [];
+const recentToolCalls: Array<Record<string, string | number | boolean | undefined>> = [];
 
 const eventSchema = z.object({
   id: z.string(),
@@ -158,7 +159,7 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
     },
-    async () => {
+    async () => withToolTrace("list_live_matches", async () => {
       const matches = [...replayMatches];
 
       if (process.env.TXLINE_API_TOKEN) {
@@ -179,7 +180,42 @@ export function createSignalMcpServer(): McpServer {
           },
         ],
       };
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "open_signal_demo",
+    {
+      title: "Open Signal demo",
+      description:
+        "Open the England vs Croatia Signal replay companion with a contextual Pulse Challenge.",
+      inputSchema: {},
+      outputSchema: pulseOutputSchema,
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+      _meta: {
+        ui: { resourceUri: SIGNAL_WIDGET_URI },
+        "openai/outputTemplate": SIGNAL_WIDGET_URI,
+        "openai/toolInvocation/invoking": "Opening Signal demo…",
+        "openai/toolInvocation/invoked": "Signal demo is live.",
+      },
     },
+    async () => withToolTrace("open_signal_demo", async () => {
+      const pulse = createReplaySession("replay-england-croatia");
+      return {
+        structuredContent: pulse,
+        content: [
+          {
+            type: "text",
+            text: `${pulse.matchState.homeTeam} vs ${pulse.matchState.awayTeam} is open in Signal. ${pulse.marketExplanation} Pulse Challenge: ${pulse.challenge.question}`,
+          },
+        ],
+      };
+    }),
   );
 
   registerAppTool(
@@ -206,7 +242,7 @@ export function createSignalMcpServer(): McpServer {
         "openai/toolInvocation/invoked": "Signal is live.",
       },
     },
-    async ({ fixtureId, mode }) => {
+    async ({ fixtureId, mode }) => withToolTrace("open_match", async () => {
       if (mode !== "replay") {
         throw new Error("Live mode is scaffolded but replay mode is the current working MVP.");
       }
@@ -221,7 +257,7 @@ export function createSignalMcpServer(): McpServer {
           },
         ],
       };
-    },
+    }),
   );
 
   server.registerTool(
@@ -239,13 +275,13 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
     },
-    async ({ sessionId }) => {
+    async ({ sessionId }) => withToolTrace("get_current_pulse", async () => {
       const pulse = getSessionPulse(sessionId);
       return {
         structuredContent: pulse,
         content: [{ type: "text", text: pulse.challenge.question }],
       };
-    },
+    }),
   );
 
   server.registerTool(
@@ -265,13 +301,13 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
     },
-    async ({ sessionId, challengeId, answer }) => {
+    async ({ sessionId, challengeId, answer }) => withToolTrace("submit_answer", async () => {
       const pulse = submitAnswer(sessionId, challengeId, answer);
       return {
         structuredContent: pulse,
         content: [{ type: "text", text: `${answer} locked. Waiting for the next TxLINE signal.` }],
       };
-    },
+    }),
   );
 
   server.registerTool(
@@ -291,7 +327,7 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
     },
-    async ({ sessionId, challengeId }) => {
+    async ({ sessionId, challengeId }) => withToolTrace("resolve_pulse", async () => {
       const pulse = resolveSessionPulse(sessionId, challengeId);
       const result = pulse.lastResult?.result ?? "Signal advanced to the next TxLINE update.";
       return {
@@ -303,7 +339,7 @@ export function createSignalMcpServer(): McpServer {
           },
         ],
       };
-    },
+    }),
   );
 
   server.registerTool(
@@ -323,13 +359,13 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
     },
-    async ({ sessionId }) => {
+    async ({ sessionId }) => withToolTrace("get_spoken_summary", async () => {
       const summary = getSpokenSummary(sessionId);
       return {
         structuredContent: summary,
         content: [{ type: "text", text: summary.script }],
       };
-    },
+    }),
   );
 
   return server;
@@ -404,6 +440,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     writeJson(res, 200, {
       now: new Date().toISOString(),
       recentRequests,
+      recentToolCalls,
     });
     return;
   }
@@ -487,4 +524,32 @@ function recordRequest(req: IncomingMessage, url: URL): void {
 function header(req: IncomingMessage, name: string): string | undefined {
   const value = req.headers[name];
   return Array.isArray(value) ? value.join(", ") : value;
+}
+
+async function withToolTrace<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    const result = await fn();
+    recordToolCall({
+      at: new Date().toISOString(),
+      name,
+      ok: true,
+      durationMs: Date.now() - startedAt,
+    });
+    return result;
+  } catch (error) {
+    recordToolCall({
+      at: new Date().toISOString(),
+      name,
+      ok: false,
+      durationMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+function recordToolCall(entry: Record<string, string | number | boolean | undefined>): void {
+  recentToolCalls.push(entry);
+  while (recentToolCalls.length > 80) recentToolCalls.shift();
 }

@@ -409,7 +409,6 @@ export function signalWidgetHtml(): string {
         });
         updateFromResponse(response);
         return response;
-        }
       }
 
       async function answer(value) {
