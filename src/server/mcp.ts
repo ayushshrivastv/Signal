@@ -19,6 +19,8 @@ import {
 import { SIGNAL_WIDGET_URI, signalWidgetHtml } from "./widget.js";
 
 const MCP_PATH = "/mcp";
+const CORS_HEADERS =
+  "authorization, content-type, mcp-session-id, openai-conversation-id, openai-ephemeral-user-id, openai-locale, x-openai-conversation-id, x-openai-ephemeral-user-id, x-openai-locale";
 
 const pulseOutputSchema = {
   sessionId: z.string(),
@@ -283,7 +285,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
 
-  if (req.method === "OPTIONS" && url.pathname === MCP_PATH) {
+  console.log(`${req.method ?? "UNKNOWN"} ${url.pathname}`);
+
+  if (req.method === "OPTIONS") {
     writeCors(res, 204);
     res.end();
     return;
@@ -348,7 +352,7 @@ function writeCors(res: ServerResponse, status = 200): void {
   res.writeHead(status, {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "content-type, mcp-session-id",
+    "Access-Control-Allow-Headers": CORS_HEADERS,
     "Access-Control-Expose-Headers": "Mcp-Session-Id",
   });
 }
@@ -356,7 +360,7 @@ function writeCors(res: ServerResponse, status = 200): void {
 function setCorsHeaders(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "content-type, mcp-session-id");
+  res.setHeader("Access-Control-Allow-Headers", CORS_HEADERS);
   res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 }
 
