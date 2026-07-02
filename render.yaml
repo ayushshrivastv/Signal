@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: signal-mcp
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SIGNAL_DEFAULT_MODE
+        value: replay
+      - key: TXLINE_API_BASE_URL
+        value: https://txline.txodds.com
+      - key: APP_PUBLIC_URL
+        sync: false
+      - key: TXLINE_API_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
