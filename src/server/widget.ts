@@ -67,29 +67,62 @@ export function signalWidgetHtml(): string {
         padding: 14px;
       }
 
-      .header,
+      .match-card,
       .panel {
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--panel);
       }
 
-      .header {
+      .match-card {
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        gap: 14px;
+        padding: 14px;
+      }
+
+      .match-meta {
+        display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .scoreboard {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        gap: 14px;
       }
 
       .team {
         display: grid;
-        gap: 3px;
+        gap: 7px;
+        justify-items: start;
         min-width: 0;
       }
 
       .team:last-child {
+        justify-items: end;
         text-align: right;
+      }
+
+      .flag {
+        width: 38px;
+        height: 28px;
+        border: 2px solid rgba(255, 255, 255, 0.78);
+        border-radius: 6px;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12) inset;
+      }
+
+      .flag.home {
+        background: linear-gradient(90deg, #193a9a 0 33%, #ffffff 33% 66%, #ef3340 66%);
+      }
+
+      .flag.away {
+        background: linear-gradient(#c60b1e 0 25%, #ffc400 25% 75%, #c60b1e 75%);
       }
 
       .name {
@@ -108,11 +141,11 @@ export function signalWidgetHtml(): string {
       .score {
         display: grid;
         justify-items: center;
-        gap: 2px;
+        gap: 5px;
       }
 
       .score strong {
-        font-size: 26px;
+        font-size: 36px;
         line-height: 1;
       }
 
@@ -137,7 +170,8 @@ export function signalWidgetHtml(): string {
 
       .explanation,
       .context,
-      .result {
+      .result,
+      .position {
         color: var(--muted);
         font-size: 13px;
         line-height: 1.45;
@@ -193,12 +227,21 @@ export function signalWidgetHtml(): string {
         gap: 8px;
       }
 
-      .event {
+      .event,
+      .highlight {
         border-left: 2px solid var(--accent);
         padding-left: 8px;
         color: var(--muted);
         font-size: 12px;
         line-height: 1.35;
+      }
+
+      .highlight strong {
+        color: var(--text);
+        display: block;
+        font-size: 11px;
+        margin-bottom: 2px;
+        text-transform: uppercase;
       }
 
       .empty {
@@ -208,7 +251,7 @@ export function signalWidgetHtml(): string {
       }
 
       @media (max-width: 420px) {
-        .header {
+        .scoreboard {
           grid-template-columns: 1fr;
         }
 
@@ -221,19 +264,32 @@ export function signalWidgetHtml(): string {
   </head>
   <body>
     <main class="app" aria-live="polite">
-      <section class="header" aria-label="Match score">
-        <div class="team">
-          <span class="name" id="homeName">Home</span>
-          <span class="prob" id="homeProb">--</span>
+      <section class="match-card" aria-label="Match score">
+        <div class="match-meta">
+          <span id="competition">FIFA World Cup 2026</span>
+          <span id="status">Replay</span>
         </div>
-        <div class="score">
-          <strong id="score">0-0</strong>
-          <span class="minute" id="minute">--'</span>
+        <div class="scoreboard">
+          <div class="team">
+            <span class="flag" id="homeFlag" aria-hidden="true"></span>
+            <span class="name" id="homeName">Home</span>
+            <span class="prob" id="homeProb">--</span>
+          </div>
+          <div class="score">
+            <strong id="score">0-0</strong>
+            <span class="minute" id="minute">--'</span>
+          </div>
+          <div class="team">
+            <span class="flag" id="awayFlag" aria-hidden="true"></span>
+            <span class="name" id="awayName">Away</span>
+            <span class="prob" id="awayProb">--</span>
+          </div>
         </div>
-        <div class="team">
-          <span class="name" id="awayName">Away</span>
-          <span class="prob" id="awayProb">--</span>
-        </div>
+      </section>
+
+      <section class="panel" aria-label="Recent TxLINE highlights">
+        <div class="label">Recent highlights</div>
+        <div class="feed" id="highlights"></div>
       </section>
 
       <section class="panel" aria-label="Market pulse">
@@ -245,8 +301,18 @@ export function signalWidgetHtml(): string {
         </div>
       </section>
 
+      <section class="panel" aria-label="Prediction position">
+        <div class="label">Signal market</div>
+        <div class="question" id="positionTitle">No open position</div>
+        <div class="position" id="positionState">Waiting for market intent.</div>
+        <div class="meta">
+          <span class="pill" id="stakeLine">Stake --</span>
+          <span class="pill" id="settlementLine">TxLINE settlement</span>
+        </div>
+      </section>
+
       <section class="panel" aria-label="Pulse challenge">
-        <div class="label">Pulse challenge</div>
+        <div class="label">Fan pulse</div>
         <div class="context" id="context">Waiting for the current match story.</div>
         <div class="question" id="question">Open a match to start Signal.</div>
         <div class="actions">
@@ -272,6 +338,10 @@ export function signalWidgetHtml(): string {
       const pendingRequests = new Map();
 
       const els = {
+        competition: document.getElementById("competition"),
+        status: document.getElementById("status"),
+        homeFlag: document.getElementById("homeFlag"),
+        awayFlag: document.getElementById("awayFlag"),
         homeName: document.getElementById("homeName"),
         awayName: document.getElementById("awayName"),
         homeProb: document.getElementById("homeProb"),
@@ -284,7 +354,12 @@ export function signalWidgetHtml(): string {
         context: document.getElementById("context"),
         question: document.getElementById("question"),
         result: document.getElementById("result"),
+        highlights: document.getElementById("highlights"),
         feed: document.getElementById("feed"),
+        positionTitle: document.getElementById("positionTitle"),
+        positionState: document.getElementById("positionState"),
+        stakeLine: document.getElementById("stakeLine"),
+        settlementLine: document.getElementById("settlementLine"),
         yesButton: document.getElementById("yesButton"),
         noButton: document.getElementById("noButton"),
         resolveButton: document.getElementById("resolveButton"),
@@ -300,12 +375,15 @@ export function signalWidgetHtml(): string {
         if (!pulse?.matchState) return;
 
         const state = pulse.matchState;
+        els.status.textContent = state.phase === "fulltime" ? "Full-time" : state.mode === "replay" ? "Replay" : "Live";
+        els.homeFlag.style.background = flagBackground(state.homeTeam, "home");
+        els.awayFlag.style.background = flagBackground(state.awayTeam, "away");
         els.homeName.textContent = state.homeTeam;
         els.awayName.textContent = state.awayTeam;
         els.homeProb.textContent = probability(state.latestOdds?.homeProbability);
         els.awayProb.textContent = probability(state.latestOdds?.awayProbability);
         els.score.textContent = state.score.home + "-" + state.score.away;
-        els.minute.textContent = state.minute + "'";
+        els.minute.textContent = state.phase === "fulltime" ? "FT" : state.minute + "'";
         els.market.textContent = pulse.marketExplanation;
         els.mode.textContent = state.mode === "replay" ? "Replay mode" : "Live mode";
         els.streak.textContent = "Streak " + pulse.streak;
@@ -329,6 +407,9 @@ export function signalWidgetHtml(): string {
           els.result.textContent = "Pick before the next signal arrives.";
         }
 
+        renderHighlights(pulse.highlights ?? []);
+        renderPosition(pulse.prediction);
+
         els.feed.innerHTML = "";
         const events = state.recentEvents ?? [];
         if (events.length === 0) {
@@ -345,6 +426,64 @@ export function signalWidgetHtml(): string {
           row.textContent = event.minute + "' " + event.description;
           els.feed.appendChild(row);
         }
+      }
+
+      function renderHighlights(highlights) {
+        els.highlights.innerHTML = "";
+        if (highlights.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "Waiting for TxLINE highlights.";
+          els.highlights.appendChild(empty);
+          return;
+        }
+
+        for (const highlight of highlights.slice(0, 3)) {
+          const row = document.createElement("div");
+          row.className = "highlight";
+          const label = document.createElement("strong");
+          label.textContent = highlight.label;
+          const text = document.createElement("span");
+          text.textContent = highlight.text;
+          row.append(label, text);
+          els.highlights.appendChild(row);
+        }
+      }
+
+      function renderPosition(position) {
+        if (!position) {
+          els.positionTitle.textContent = "No open position";
+          els.positionState.textContent = "Waiting for market intent.";
+          els.stakeLine.textContent = "Stake --";
+          els.settlementLine.textContent = "TxLINE settlement";
+          return;
+        }
+
+        els.positionTitle.textContent = position.prediction + " - " + position.marketLabel;
+        els.positionState.textContent =
+          position.status === "locked"
+            ? "Locked with signature " + shortText(position.txSignature)
+            : position.walletAddress
+              ? "Wallet attached. Ready for the user to sign the devnet escrow transaction."
+              : "Quote prepared. Wallet address is needed before signing.";
+        els.stakeLine.textContent = position.stakeUsd + " " + position.asset + " until " + position.expiryMinute + "'";
+        els.settlementLine.textContent = position.network + " escrow";
+      }
+
+      function shortText(value) {
+        if (!value) return "";
+        return value.length > 14 ? value.slice(0, 6) + "..." + value.slice(-6) : value;
+      }
+
+      function flagBackground(teamName, side) {
+        const flags = {
+          France: "linear-gradient(90deg, #193a9a 0 33%, #ffffff 33% 66%, #ef3340 66%)",
+          Spain: "linear-gradient(#c60b1e 0 25%, #ffc400 25% 75%, #c60b1e 75%)",
+          England: "linear-gradient(90deg, #ffffff 0 42%, #c8102e 42% 58%, #ffffff 58%)",
+          Croatia: "linear-gradient(#ff0000 0 33%, #ffffff 33% 66%, #171796 66%)",
+        };
+
+        return flags[teamName] ?? (side === "home" ? "#2b65f6" : "#ef6b73");
       }
 
       function updateFromResponse(response) {

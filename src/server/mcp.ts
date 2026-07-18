@@ -10,9 +10,12 @@ import { z } from "zod";
 import { replayMatches } from "../txline/replay.js";
 import { createTxLineClientFromEnv } from "../txline/client.js";
 import {
+  connectPredictionWallet,
   createReplaySession,
   getSessionPulse,
   getSpokenSummary,
+  lockPredictionPosition,
+  quotePredictionPosition,
   resolveSessionPulse,
   submitAnswer,
 } from "../store/sessions.js";
@@ -93,11 +96,43 @@ const resultSchema = z.object({
   matchedEvent: eventSchema.optional(),
 });
 
+const highlightSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  text: z.string(),
+  source: z.enum(["txline-score", "txline-odds", "signal"]),
+});
+
+const predictionSchema = z.object({
+  id: z.string(),
+  fixtureId: z.string(),
+  market: z.literal("team_goal_next_window"),
+  marketLabel: z.string(),
+  prediction: z.enum(["YES", "NO"]),
+  team: z.enum(["home", "away"]),
+  teamName: z.string(),
+  stakeUsd: z.number(),
+  asset: z.literal("USDC"),
+  windowMinutes: z.number(),
+  openedMinute: z.number(),
+  expiryMinute: z.number(),
+  status: z.enum(["quote", "ready_to_sign", "locked", "settled_demo"]),
+  walletAddress: z.string().optional(),
+  txSignature: z.string().optional(),
+  escrowProgram: z.string(),
+  settlementSource: z.literal("TxLINE score events"),
+  settlementRule: z.string(),
+  network: z.literal("devnet"),
+  complianceNote: z.string(),
+});
+
 const pulseOutputSchema = {
   sessionId: z.string(),
   matchState: matchStateSchema,
   marketExplanation: z.string(),
+  highlights: z.array(highlightSchema),
   challenge: challengeSchema,
+  prediction: predictionSchema.optional(),
   streak: z.number(),
   lastResult: resultSchema.optional(),
 };
@@ -220,6 +255,41 @@ export function createSignalMcpServer(): McpServer {
 
   registerAppTool(
     server,
+    "open_signal_markets_demo",
+    {
+      title: "Open Signal Markets demo",
+      description:
+        "Open the France vs Spain Signal Markets replay, showing the score, three TxLINE highlights, and prediction-market readiness.",
+      inputSchema: {},
+      outputSchema: pulseOutputSchema,
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+      _meta: {
+        ui: { resourceUri: SIGNAL_WIDGET_URI },
+        "openai/outputTemplate": SIGNAL_WIDGET_URI,
+        "openai/toolInvocation/invoking": "Opening Signal Markets…",
+        "openai/toolInvocation/invoked": "Signal Markets is live.",
+      },
+    },
+    async () => withToolTrace("open_signal_markets_demo", async () => {
+      const pulse = createReplaySession("replay-france-spain");
+      return {
+        structuredContent: pulse,
+        content: [
+          {
+            type: "text",
+            text: `${pulse.matchState.homeTeam} vs ${pulse.matchState.awayTeam} is open in Signal Markets. ${pulse.highlights.map((highlight) => highlight.text).join(" ")}`,
+          },
+        ],
+      };
+    }),
+  );
+
+  registerAppTool(
+    server,
     "open_match",
     {
       title: "Open Signal match",
@@ -282,6 +352,113 @@ export function createSignalMcpServer(): McpServer {
         content: [{ type: "text", text: pulse.challenge.question }],
       };
     }),
+  );
+
+  server.registerTool(
+    "quote_signal_prediction",
+    {
+      title: "Quote Signal prediction",
+      description:
+        "Prepare a devnet Signal Markets prediction quote from a fan request, such as France to score in the next 10 minutes for 1 USDC. This does not move funds.",
+      inputSchema: {
+        sessionId: z.string().min(1),
+        team: z.enum(["home", "away"]).describe("Use home for the left-side team and away for the right-side team."),
+        prediction: z.enum(["YES", "NO"]).default("YES"),
+        stakeUsd: z.number().positive().max(100),
+        windowMinutes: z.number().int().min(1).max(30).default(10),
+        walletAddress: z.string().min(1).optional(),
+      },
+      outputSchema: pulseOutputSchema,
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+    },
+    async ({ sessionId, team, prediction, stakeUsd, windowMinutes, walletAddress }) =>
+      withToolTrace("quote_signal_prediction", async () => {
+        const pulse = quotePredictionPosition(sessionId, {
+          team,
+          prediction,
+          stakeUsd,
+          windowMinutes,
+          walletAddress,
+        });
+        const quote = pulse.prediction;
+        return {
+          structuredContent: pulse,
+          content: [
+            {
+              type: "text",
+              text: quote
+                ? `Prepared devnet escrow quote: ${quote.prediction} on ${quote.marketLabel}, ${quote.stakeUsd} ${quote.asset}, expires at ${quote.expiryMinute}'. User must sign before funds are locked.`
+                : "Signal could not prepare that prediction quote.",
+            },
+          ],
+        };
+      }),
+  );
+
+  server.registerTool(
+    "connect_signal_wallet",
+    {
+      title: "Connect Signal wallet",
+      description:
+        "Attach a Solana wallet address to a prepared Signal Markets prediction quote before signing a devnet escrow transaction.",
+      inputSchema: {
+        sessionId: z.string().min(1),
+        positionId: z.string().min(1),
+        walletAddress: z.string().min(1),
+      },
+      outputSchema: pulseOutputSchema,
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+    },
+    async ({ sessionId, positionId, walletAddress }) =>
+      withToolTrace("connect_signal_wallet", async () => {
+        const pulse = connectPredictionWallet(sessionId, positionId, walletAddress);
+        return {
+          structuredContent: pulse,
+          content: [{ type: "text", text: "Wallet attached to the Signal Markets devnet quote." }],
+        };
+      }),
+  );
+
+  server.registerTool(
+    "record_signal_prediction_signature",
+    {
+      title: "Record Signal prediction signature",
+      description:
+        "Record the signed devnet escrow transaction signature for a prepared Signal Markets position. Use after the user signs externally.",
+      inputSchema: {
+        sessionId: z.string().min(1),
+        positionId: z.string().min(1),
+        walletAddress: z.string().min(1),
+        txSignature: z.string().min(1),
+      },
+      outputSchema: pulseOutputSchema,
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+    },
+    async ({ sessionId, positionId, walletAddress, txSignature }) =>
+      withToolTrace("record_signal_prediction_signature", async () => {
+        const pulse = lockPredictionPosition(sessionId, positionId, walletAddress, txSignature);
+        return {
+          structuredContent: pulse,
+          content: [
+            {
+              type: "text",
+              text: "Signal recorded the signed devnet escrow transaction. Settlement will be driven by TxLINE score events.",
+            },
+          ],
+        };
+      }),
   );
 
   server.registerTool(

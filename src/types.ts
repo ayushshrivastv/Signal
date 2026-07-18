@@ -126,7 +126,9 @@ export type SignalPulse = {
   sessionId: string;
   matchState: MatchState;
   marketExplanation: string;
+  highlights: SignalHighlight[];
   challenge: PulseChallenge;
+  prediction?: SignalPredictionPosition;
   streak: number;
   lastResult?: PulseResult;
 };
@@ -137,7 +139,42 @@ export type SignalSession = {
   mode: "live" | "replay";
   matchState: MatchState;
   challenge: PulseChallenge;
+  prediction?: SignalPredictionPosition;
   streak: number;
   replayIndex: number;
   lastResult?: PulseResult;
+};
+
+export type SignalHighlight = {
+  id: string;
+  label: string;
+  text: string;
+  source: "txline-score" | "txline-odds" | "signal";
+};
+
+export type PredictionMarketType = "team_goal_next_window";
+export type PredictionSide = "YES" | "NO";
+export type PredictionPositionStatus = "quote" | "ready_to_sign" | "locked" | "settled_demo";
+
+export type SignalPredictionPosition = {
+  id: string;
+  fixtureId: string;
+  market: PredictionMarketType;
+  marketLabel: string;
+  prediction: PredictionSide;
+  team: TeamSide;
+  teamName: string;
+  stakeUsd: number;
+  asset: "USDC";
+  windowMinutes: number;
+  openedMinute: number;
+  expiryMinute: number;
+  status: PredictionPositionStatus;
+  walletAddress?: string;
+  txSignature?: string;
+  escrowProgram: string;
+  settlementSource: "TxLINE score events";
+  settlementRule: string;
+  network: "devnet";
+  complianceNote: string;
 };

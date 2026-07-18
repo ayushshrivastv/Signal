@@ -1,4 +1,10 @@
-import type { SignalPulse, SignalSession } from "../types.js";
+import type { PredictionSide, SignalPulse, SignalSession, TeamSide } from "../types.js";
+import {
+  attachWallet,
+  createPredictionQuote,
+  createSignalHighlights,
+  recordDemoSignature,
+} from "../markets/predictions.js";
 import { createPulseChallenge, explainMarket } from "../pulse/challenge-generator.js";
 import { resolveChallenge } from "../pulse/resolver.js";
 import { getNextReplayState, getReplayInitialState } from "../txline/replay.js";
@@ -23,6 +29,57 @@ export function createReplaySession(fixtureId: string): SignalPulse {
 
 export function getSessionPulse(sessionId: string): SignalPulse {
   const session = requireSession(sessionId);
+  return toPulse(session);
+}
+
+export function quotePredictionPosition(
+  sessionId: string,
+  input: {
+    team: TeamSide;
+    prediction?: PredictionSide;
+    stakeUsd: number;
+    windowMinutes?: number;
+    walletAddress?: string;
+  },
+): SignalPulse {
+  const session = requireSession(sessionId);
+  session.prediction = createPredictionQuote(session.matchState, {
+    team: input.team,
+    prediction: input.prediction ?? "YES",
+    stakeUsd: input.stakeUsd,
+    windowMinutes: input.windowMinutes,
+    walletAddress: input.walletAddress,
+  });
+
+  return toPulse(session);
+}
+
+export function connectPredictionWallet(
+  sessionId: string,
+  positionId: string,
+  walletAddress: string,
+): SignalPulse {
+  const session = requireSession(sessionId);
+  if (!session.prediction || session.prediction.id !== positionId) {
+    throw new Error("That prediction position is no longer active.");
+  }
+
+  session.prediction = attachWallet(session.prediction, walletAddress);
+  return toPulse(session);
+}
+
+export function lockPredictionPosition(
+  sessionId: string,
+  positionId: string,
+  walletAddress: string,
+  txSignature: string,
+): SignalPulse {
+  const session = requireSession(sessionId);
+  if (!session.prediction || session.prediction.id !== positionId) {
+    throw new Error("That prediction position is no longer active.");
+  }
+
+  session.prediction = recordDemoSignature(session.prediction, walletAddress, txSignature);
   return toPulse(session);
 }
 
@@ -89,13 +146,15 @@ function requireSession(sessionId: string): SignalSession {
 }
 
 function toPulse(session: SignalSession): SignalPulse {
+  const marketExplanation = explainMarket(session.matchState);
   return {
     sessionId: session.id,
     matchState: session.matchState,
-    marketExplanation: explainMarket(session.matchState),
+    marketExplanation,
+    highlights: createSignalHighlights(session.matchState, marketExplanation),
     challenge: session.challenge,
+    prediction: session.prediction,
     streak: session.streak,
     lastResult: session.lastResult,
   };
 }
-
