@@ -102,3 +102,4 @@ Signal Markets currently prepares devnet escrow metadata only. The server does n
 - TxLINE devnet activation: [docs/TXLINE_DEVNET_ACTIVATION.md](./docs/TXLINE_DEVNET_ACTIVATION.md)
 - Demo script: [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)
 - Render deploy: [docs/RENDER_DEPLOY.md](./docs/RENDER_DEPLOY.md)
+- Vercel deploy: [docs/VERCEL_DEPLOY.md](./docs/VERCEL_DEPLOY.md)

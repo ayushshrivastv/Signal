@@ -602,7 +602,7 @@ export function startHttpServer(): void {
   });
 }
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (!req.url) {
     res.writeHead(400).end("Missing URL");
     return;
