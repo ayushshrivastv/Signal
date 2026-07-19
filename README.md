@@ -99,5 +99,6 @@ Signal Markets currently prepares devnet escrow metadata only. The server does n
 - Product plan: [SIGNAL_PLAN.md](./SIGNAL_PLAN.md)
 - Signal Markets plan: [docs/SIGNAL_MARKETS.md](./docs/SIGNAL_MARKETS.md)
 - TxLINE endpoints: [docs/TXLINE_ENDPOINTS.md](./docs/TXLINE_ENDPOINTS.md)
+- TxLINE devnet activation: [docs/TXLINE_DEVNET_ACTIVATION.md](./docs/TXLINE_DEVNET_ACTIVATION.md)
 - Demo script: [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)
 - Render deploy: [docs/RENDER_DEPLOY.md](./docs/RENDER_DEPLOY.md)
