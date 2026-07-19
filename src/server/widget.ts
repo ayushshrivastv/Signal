@@ -1,4 +1,5 @@
 export const SIGNAL_WIDGET_URI = "ui://signal/score-v2.html";
+export const SIGNAL_LEGACY_WIDGET_URI = "ui://signal/pulse.html";
 
 export function signalWidgetHtml(): string {
   return String.raw`

@@ -21,7 +21,8 @@ import {
   resolveSessionPulse,
   submitAnswer,
 } from "../store/sessions.js";
-import { SIGNAL_WIDGET_URI, signalWidgetHtml } from "./widget.js";
+import type { MatchState } from "../types.js";
+import { SIGNAL_LEGACY_WIDGET_URI, SIGNAL_WIDGET_URI, signalWidgetHtml } from "./widget.js";
 
 const MCP_PATH = "/mcp";
 const CORS_HEADERS =
@@ -154,15 +155,43 @@ export function createSignalMcpServer(): McpServer {
 
   registerAppResource(
     server,
-    "Signal Pulse Widget",
+    "Signal Score Widget",
     SIGNAL_WIDGET_URI,
     {
-      description: "Interactive Signal match companion UI for ChatGPT.",
+      description: "Score-only Signal match UI for ChatGPT.",
     },
     async () => ({
       contents: [
         {
           uri: SIGNAL_WIDGET_URI,
+          mimeType: RESOURCE_MIME_TYPE,
+          text: signalWidgetHtml(),
+          _meta: {
+            ui: {
+              prefersBorder: true,
+              domain: process.env.APP_PUBLIC_URL ?? "https://signal-an6w.onrender.com",
+              csp: {
+                connectDomains: [],
+                resourceDomains: [],
+              },
+            },
+          },
+        },
+      ],
+    }),
+  );
+
+  registerAppResource(
+    server,
+    "Signal Legacy Score Widget",
+    SIGNAL_LEGACY_WIDGET_URI,
+    {
+      description: "Legacy Signal widget URI serving the current score-only UI.",
+    },
+    async () => ({
+      contents: [
+        {
+          uri: SIGNAL_LEGACY_WIDGET_URI,
           mimeType: RESOURCE_MIME_TYPE,
           text: signalWidgetHtml(),
           _meta: {
@@ -236,7 +265,7 @@ export function createSignalMcpServer(): McpServer {
     {
       title: "Open Signal demo",
       description:
-        "Open the England vs Croatia Signal replay companion with a contextual Pulse Challenge.",
+        "Open the England vs Croatia Signal replay score view.",
       inputSchema: {},
       outputSchema: pulseOutputSchema,
       annotations: {
@@ -258,7 +287,7 @@ export function createSignalMcpServer(): McpServer {
         content: [
           {
             type: "text",
-            text: `${pulse.matchState.homeTeam} vs ${pulse.matchState.awayTeam} is open in Signal. ${pulse.marketExplanation} Pulse Challenge: ${pulse.challenge.question}`,
+            text: scoreText(pulse.matchState),
           },
         ],
       };
@@ -271,7 +300,7 @@ export function createSignalMcpServer(): McpServer {
     {
       title: "Open Signal Markets demo",
       description:
-        "Open the France vs Spain Signal Markets replay, showing the score, three TxLINE highlights, and prediction-market readiness.",
+        "Open the France vs Spain Signal score view.",
       inputSchema: {},
       outputSchema: pulseOutputSchema,
       annotations: {
@@ -293,7 +322,7 @@ export function createSignalMcpServer(): McpServer {
         content: [
           {
             type: "text",
-            text: `${pulse.matchState.homeTeam} vs ${pulse.matchState.awayTeam} is open in Signal Markets. ${pulse.highlights.map((highlight) => highlight.text).join(" ")}`,
+            text: scoreText(pulse.matchState),
           },
         ],
       };
@@ -306,7 +335,7 @@ export function createSignalMcpServer(): McpServer {
     {
       title: "Open Signal match",
       description:
-        "Open a Signal match companion session. For the hackathon demo, use mode=replay with fixtureId=replay-england-croatia.",
+        "Open a Signal score view. For the hackathon demo, use mode=replay with fixtureId=replay-france-spain.",
       inputSchema: {
         fixtureId: z.string().min(1),
         mode: z.enum(["live", "replay"]).default("replay"),
@@ -331,7 +360,7 @@ export function createSignalMcpServer(): McpServer {
         content: [
           {
             type: "text",
-            text: `${pulse.matchState.homeTeam} vs ${pulse.matchState.awayTeam} is open in Signal. ${pulse.marketExplanation} Pulse Challenge: ${pulse.challenge.question}`,
+            text: scoreText(pulse.matchState),
           },
         ],
       };
@@ -836,6 +865,21 @@ function txLineAutostartFixtureIds(): string[] {
     .split(",")
     .map((fixtureId) => fixtureId.trim())
     .filter(Boolean);
+}
+
+function scoreText(state: MatchState): string {
+  const status =
+    state.phase === "fulltime"
+      ? "Full-time"
+      : state.phase === "halftime"
+        ? "Half-time"
+        : state.minute
+          ? `${state.minute}'`
+          : state.mode === "live"
+            ? "Live"
+            : "Replay";
+
+  return `${state.homeTeam} ${state.score.home}-${state.score.away} ${state.awayTeam}. ${status}.`;
 }
 
 function recordTxLineStartupEvent(entry: Record<string, string | boolean | undefined>): void {
