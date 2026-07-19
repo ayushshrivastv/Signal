@@ -13,6 +13,8 @@ describe("Signal widget", () => {
 
     expect(script).toBeTruthy();
     expect(() => new vm.Script(script ?? "")).not.toThrow();
+    expect(script).toContain("get_current_pulse");
+    expect(script).toContain("LIVE_POLL_MS = 8000");
   });
 
   it("renders score mode without market, highlight, or fan pulse panels", () => {

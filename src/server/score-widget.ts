@@ -206,7 +206,10 @@ export function signalScoreWidgetHtml(): string {
     <script>
       let pulse = null;
       let rpcId = 0;
+      let pollTimer = null;
+      let polling = false;
       const pendingRequests = new Map();
+      const LIVE_POLL_MS = 8000;
 
       const els = {
         dateLabel: document.getElementById("dateLabel"),
@@ -272,6 +275,7 @@ export function signalScoreWidgetHtml(): string {
         const nextPulse = response?.structuredContent ?? response;
         if (nextPulse?.matchState) {
           render(nextPulse);
+          startLivePolling();
         }
       }
 
@@ -313,14 +317,41 @@ export function signalScoreWidgetHtml(): string {
         { passive: true },
       );
 
-      (async () => {
+      const bridgeReady = (async () => {
         await rpcRequest("ui/initialize", {
-          appInfo: { name: "signal-score-widget", version: "0.2.0" },
+          appInfo: { name: "signal-score-widget", version: "0.3.0" },
           appCapabilities: {},
           protocolVersion: "2026-01-26",
         });
         rpcNotify("ui/notifications/initialized", {});
       })();
+
+      async function callTool(name, args) {
+        await bridgeReady;
+        const response = await rpcRequest("tools/call", {
+          name,
+          arguments: args,
+        });
+        updateFromResponse(response);
+        return response;
+      }
+
+      function startLivePolling() {
+        if (pollTimer || pulse?.matchState?.mode !== "live" || !pulse?.sessionId) return;
+        pollTimer = window.setInterval(refreshLivePulse, LIVE_POLL_MS);
+      }
+
+      async function refreshLivePulse() {
+        if (polling || pulse?.matchState?.mode !== "live" || !pulse?.sessionId) return;
+        polling = true;
+        try {
+          await callTool("get_current_pulse", { sessionId: pulse.sessionId });
+        } catch {
+          // ChatGPT can temporarily pause iframe tool calls; keep the next poll alive.
+        } finally {
+          polling = false;
+        }
+      }
 
       render(pulse);
     </script>

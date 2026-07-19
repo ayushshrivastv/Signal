@@ -302,6 +302,43 @@ export function createSignalMcpServer(): McpServer {
 
   registerAppTool(
     server,
+    "open_signal_live_scoreboard",
+    {
+      title: "Open Signal Live Scoreboard",
+      description:
+        "Open a live TxLINE scoreboard. Defaults to fixture 18257739, the configured devnet autostart fixture.",
+      inputSchema: {
+        fixtureId: z.string().min(1).optional(),
+      },
+      outputSchema: pulseOutputSchema,
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+      _meta: {
+        ui: { resourceUri: SIGNAL_SCORE_WIDGET_URI },
+        "openai/outputTemplate": SIGNAL_SCORE_WIDGET_URI,
+        "openai/toolInvocation/invoking": "Opening live scoreboard…",
+        "openai/toolInvocation/invoked": "Live scoreboard opened.",
+      },
+    },
+    async ({ fixtureId }) => withToolTrace("open_signal_live_scoreboard", async () => {
+      const pulse = await createLiveSession(fixtureId ?? defaultLiveFixtureId());
+      return {
+        structuredContent: pulse,
+        content: [
+          {
+            type: "text",
+            text: `${scoreText(pulse.matchState)} TxLINE live polling is active in the scoreboard.`,
+          },
+        ],
+      };
+    }),
+  );
+
+  registerAppTool(
+    server,
     "open_signal_demo",
     {
       title: "Open Signal demo",
@@ -921,6 +958,10 @@ function scoreText(state: MatchState): string {
             : "Replay";
 
   return `${state.homeTeam} ${state.score.home}-${state.score.away} ${state.awayTeam}. ${status}.`;
+}
+
+function defaultLiveFixtureId(): string {
+  return txLineAutostartFixtureIds()[0] ?? "18257739";
 }
 
 function recordTxLineStartupEvent(entry: Record<string, string | boolean | undefined>): void {
