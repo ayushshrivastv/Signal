@@ -150,7 +150,7 @@ const pulseOutputSchema = {
 };
 
 export function createSignalMcpServer(): McpServer {
-  const server = new McpServer({ name: "signal", version: "0.1.0" });
+  const server = new McpServer({ name: "signal", version: "0.2.0" });
 
   registerAppResource(
     server,
