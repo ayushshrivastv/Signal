@@ -13,8 +13,8 @@ Signal runs as a long-lived Node web service. Render is a good free hackathon de
 
 ```text
 APP_PUBLIC_URL=https://YOUR-SERVICE.onrender.com
-TXLINE_NETWORK=mainnet
-TXLINE_API_ORIGIN=https://txline.txodds.com
+TXLINE_NETWORK=devnet
+TXLINE_API_ORIGIN=https://txline-dev.txodds.com
 TXLINE_API_TOKEN=
 TXLINE_GUEST_JWT=
 TXLINE_AUTOSTART_FIXTURE_IDS=
@@ -42,8 +42,8 @@ Environment variables:
 NODE_ENV=production
 SIGNAL_DEFAULT_MODE=replay
 APP_PUBLIC_URL=https://YOUR-SERVICE.onrender.com
-TXLINE_NETWORK=mainnet
-TXLINE_API_ORIGIN=https://txline.txodds.com
+TXLINE_NETWORK=devnet
+TXLINE_API_ORIGIN=https://txline-dev.txodds.com
 TXLINE_API_TOKEN=
 TXLINE_GUEST_JWT=
 TXLINE_AUTOSTART_FIXTURE_IDS=

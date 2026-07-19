@@ -12,6 +12,9 @@ Signal runs live TxLINE mode from an activated devnet API token. The wallet subs
 | Solana RPC | `https://api.devnet.solana.com` |
 | TxLINE program | `6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J` |
 | TxL token mint | `4Zao8ocPhmMgq7PdsYWyxvqySMGx7xb9cMftPMkEokRG` |
+| Guest auth | `https://txline-dev.txodds.com/auth/guest/start` |
+| Activation | `https://txline-dev.txodds.com/api/token/activate` |
+| API base | `https://txline-dev.txodds.com/api/` |
 
 ## Preflight
 
@@ -165,9 +168,28 @@ Expected:
 
 If `TXLINE_AUTOSTART_FIXTURE_IDS` is set and valid, `health` will include score and odds stream statuses for those fixtures.
 
+## Devnet Validation Accounts
+
+The devnet program reference defines these validation PDA seeds:
+
+| Account | Seed |
+| --- | --- |
+| Daily scores roots | `daily_scores_roots` |
+| Daily batch roots | `daily_batch_roots` |
+| Ten daily fixtures roots | `ten_daily_fixtures_roots` |
+
+For score, odds, or fixture validation, derive the epoch day from the timestamp in the proof response, not from `Date.now()`.
+
+- Scores: `validation.summary.updateStats.minTimestamp`
+- Fixtures: `validation.snapshot.Ts`
+- Odds: `validation.odds.Ts`
+
+Score validation must use a real `Seq` or `seq` from an observed score record. For V2 validation, keep the `statKeys` order stable because strategy indexes refer to those same positions.
+
 ## Official References
 
 - TxLINE Quickstart: https://txline.txodds.com/documentation/quickstart
 - World Cup Free Tier: https://txline.txodds.com/documentation/worldcup
+- Devnet Program Reference: https://txline.txodds.com/documentation/programs/devnet
 - Runnable Devnet Examples: https://txline.txodds.com/documentation/examples/devnet-examples
 - Streaming Data: https://txline.txodds.com/documentation/examples/streaming-data

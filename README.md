@@ -77,8 +77,8 @@ Use:
 Copy `.env.example` to `.env` and fill TxLINE credentials when available.
 
 ```bash
-TXLINE_NETWORK=mainnet
-TXLINE_API_ORIGIN=https://txline.txodds.com
+TXLINE_NETWORK=devnet
+TXLINE_API_ORIGIN=https://txline-dev.txodds.com
 TXLINE_API_TOKEN=
 TXLINE_GUEST_JWT=
 TXLINE_AUTOSTART_FIXTURE_IDS=
