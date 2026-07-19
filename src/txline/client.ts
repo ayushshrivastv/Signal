@@ -121,7 +121,9 @@ export class TxLineClient {
       throw new Error(`TxLINE request failed ${response.status}: ${response.statusText}`);
     }
 
-    return (await response.json()) as T;
+    const text = await response.text();
+    if (!text.trim()) return [] as T;
+    return JSON.parse(text) as T;
   }
 
   private async request(

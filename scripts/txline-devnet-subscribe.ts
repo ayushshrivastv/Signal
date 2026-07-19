@@ -4,9 +4,10 @@ import * as anchor from "@coral-xyz/anchor";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
+  createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
-import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import axios from "axios";
 import nacl from "tweetnacl";
 
@@ -46,7 +47,7 @@ async function main(): Promise<void> {
     throw new Error("Wallet has no devnet SOL. Fund it before subscribing.");
   }
 
-  const txSig = await subscribeFreeTier(program, provider.wallet.publicKey);
+  const txSig = await subscribeFreeTier(program, provider);
   console.log("Subscription transaction:", txSig);
 
   const authResponse = await axios.post(`${DEVNET.apiOrigin}/auth/guest/start`);
@@ -90,8 +91,9 @@ async function main(): Promise<void> {
 
 async function subscribeFreeTier(
   program: anchor.Program,
-  user: PublicKey,
+  provider: anchor.AnchorProvider,
 ): Promise<string> {
+  const user = provider.wallet.publicKey;
   const [tokenTreasuryPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("token_treasury_v2")],
     program.programId,
@@ -118,6 +120,8 @@ async function subscribeFreeTier(
     ASSOCIATED_TOKEN_PROGRAM_ID,
   );
 
+  await ensureAssociatedTokenAccount(provider, userTokenAccount, user);
+
   return program.methods
     .subscribe(DEVNET.serviceLevelId, DEVNET.durationWeeks)
     .accounts({
@@ -132,6 +136,31 @@ async function subscribeFreeTier(
       systemProgram: SystemProgram.programId,
     })
     .rpc();
+}
+
+async function ensureAssociatedTokenAccount(
+  provider: anchor.AnchorProvider,
+  associatedTokenAccount: PublicKey,
+  owner: PublicKey,
+): Promise<void> {
+  const existing = await provider.connection.getAccountInfo(associatedTokenAccount, "confirmed");
+  if (existing) return;
+
+  const transaction = new Transaction().add(
+    createAssociatedTokenAccountInstruction(
+      owner,
+      associatedTokenAccount,
+      owner,
+      DEVNET.txlTokenMint,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+    ),
+  );
+
+  const signature = await provider.sendAndConfirm(transaction, [], {
+    commitment: "confirmed",
+  });
+  console.log("Created user TxL token account:", signature);
 }
 
 function assertNode20(): void {
