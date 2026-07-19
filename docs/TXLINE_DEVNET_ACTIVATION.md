@@ -103,6 +103,33 @@ The script performs:
 - `/api/token/activate`
 - printing the `TXLINE_API_TOKEN` for Render
 
+## First API Call
+
+After activation, verify the token against the devnet data API:
+
+```bash
+export TXLINE_NETWORK=devnet
+export TXLINE_API_ORIGIN=https://txline-dev.txodds.com
+export TXLINE_API_TOKEN="<activated devnet API token>"
+npm run txline:devnet:first-call
+```
+
+This uses the same headers required by TxLINE:
+
+```text
+Authorization: Bearer <guestJwt>
+X-Api-Token: <activatedApiToken>
+```
+
+It checks:
+
+- `/api/fixtures/snapshot`
+- `/api/scores/snapshot/{fixtureId}`
+- `/api/scores/updates/{fixtureId}`
+- `/api/odds/snapshot/{fixtureId}`
+- `/api/scores/historical/{fixtureId}`
+- `/api/scores/stat-validation` when a real `Seq`/`seq` value is observed
+
 ## Render Env Vars
 
 After activation, set these on Render:

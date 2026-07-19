@@ -9,6 +9,7 @@
     "postinstall": "npm run build",
     "start": "node dist/index.js",
     "test": "vitest run tests",
+    "txline:devnet:first-call": "tsx scripts/txline-devnet-first-call.ts",
     "txline:devnet:preflight": "tsx scripts/txline-devnet-preflight.ts",
     "txline:devnet:subscribe": "tsx scripts/txline-devnet-subscribe.ts",
     "typecheck": "tsc --noEmit"
