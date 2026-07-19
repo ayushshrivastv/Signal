@@ -25,9 +25,9 @@ export class TxLineClient {
 
   constructor(config: TxLineConfig) {
     this.network = config.network;
-    this.apiOrigin = config.apiOrigin.replace(/\/$/, "");
-    this.apiToken = config.apiToken;
-    this.guestJwt = config.guestJwt;
+    this.apiOrigin = cleanEnvValue(config.apiOrigin).replace(/\/$/, "");
+    this.apiToken = cleanOptionalEnvValue(config.apiToken);
+    this.guestJwt = cleanOptionalEnvValue(config.guestJwt);
   }
 
   get isConfigured(): boolean {
@@ -197,15 +197,16 @@ export class TxLineClient {
 }
 
 export function createTxLineClientFromEnv(): TxLineClient {
-  const network = (process.env.TXLINE_NETWORK === "devnet" ? "devnet" : "mainnet") satisfies TxLineNetwork;
+  const envNetwork = cleanEnvValue(process.env.TXLINE_NETWORK ?? "");
+  const network = (envNetwork === "devnet" ? "devnet" : "mainnet") satisfies TxLineNetwork;
   const defaultOrigin =
     network === "devnet" ? "https://txline-dev.txodds.com" : "https://txline.txodds.com";
 
   return new TxLineClient({
     network,
     apiOrigin: process.env.TXLINE_API_ORIGIN ?? process.env.TXLINE_API_BASE_URL ?? defaultOrigin,
-    apiToken: process.env.TXLINE_API_TOKEN,
-    guestJwt: process.env.TXLINE_GUEST_JWT,
+    apiToken: cleanOptionalEnvValue(process.env.TXLINE_API_TOKEN),
+    guestJwt: cleanOptionalEnvValue(process.env.TXLINE_GUEST_JWT),
   });
 }
 
@@ -292,4 +293,13 @@ function tokenFromAuthResponse(data: unknown): string | undefined {
   const record = data as Record<string, unknown>;
   const token = record.token ?? record.jwt ?? record.accessToken;
   return typeof token === "string" ? token : undefined;
+}
+
+function cleanOptionalEnvValue(value: string | undefined): string | undefined {
+  const cleaned = cleanEnvValue(value ?? "");
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+function cleanEnvValue(value: string): string {
+  return value.trim().replace(/^['"]|['"]$/g, "");
 }
