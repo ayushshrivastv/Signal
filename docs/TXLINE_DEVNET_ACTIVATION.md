@@ -44,7 +44,7 @@ This checks:
 
 ## Official Subscription Script
 
-Clone or use the official TxLINE on-chain repository:
+The safest path is to run TxLINE's official devnet script. Clone or use the official TxLINE on-chain repository:
 
 ```bash
 git clone https://github.com/txodds/tx-on-chain.git
@@ -69,6 +69,39 @@ That script uses:
 - `examples/devnet/common/users.ts`
 
 It performs the on-chain subscribe transaction, signs the activation message, and returns an activated API token.
+
+## Signal Local Subscription Script
+
+Signal also includes a local wrapper for the same documented flow:
+
+```bash
+npm run txline:devnet:subscribe
+```
+
+Before running it, copy the matching devnet IDL from the official repository:
+
+```bash
+mkdir -p txline/devnet/idl txline/devnet/types
+cp /path/to/tx-on-chain/examples/devnet/idl/txoracle.json txline/devnet/idl/txoracle.json
+cp /path/to/tx-on-chain/examples/devnet/types/txoracle.ts txline/devnet/types/txoracle.ts
+```
+
+The script will refuse to run if `txline/devnet/idl/txoracle.json` is missing or if the loaded IDL program ID does not match:
+
+```text
+6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J
+```
+
+The script performs:
+
+- service level `1`
+- duration `4` weeks
+- `SELECTED_LEAGUES=[]`
+- `subscribe(SERVICE_LEVEL_ID, DURATION_WEEKS)`
+- guest JWT request from `/auth/guest/start`
+- activation message signing over `${txSig}::${jwt}`
+- `/api/token/activate`
+- printing the `TXLINE_API_TOKEN` for Render
 
 ## Render Env Vars
 
