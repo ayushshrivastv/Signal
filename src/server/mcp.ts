@@ -22,7 +22,7 @@ import {
   submitAnswer,
 } from "../store/sessions.js";
 import type { MatchState } from "../types.js";
-import { SIGNAL_LEGACY_WIDGET_URI, SIGNAL_WIDGET_URI, signalWidgetHtml } from "./widget.js";
+import { SIGNAL_SCORE_WIDGET_URI, signalScoreWidgetHtml } from "./score-widget.js";
 
 const MCP_PATH = "/mcp";
 const CORS_HEADERS =
@@ -151,49 +151,21 @@ const pulseOutputSchema = {
 };
 
 export function createSignalMcpServer(): McpServer {
-  const server = new McpServer({ name: "signal", version: "0.2.0" });
+  const server = new McpServer({ name: "signal", version: "0.3.0" });
 
   registerAppResource(
     server,
-    "Signal Score Widget",
-    SIGNAL_WIDGET_URI,
+    "Signal World Cup Scoreboard",
+    SIGNAL_SCORE_WIDGET_URI,
     {
-      description: "Score-only Signal match UI for ChatGPT.",
+      description: "Light-mode World Cup scoreboard UI for ChatGPT.",
     },
     async () => ({
       contents: [
         {
-          uri: SIGNAL_WIDGET_URI,
+          uri: SIGNAL_SCORE_WIDGET_URI,
           mimeType: RESOURCE_MIME_TYPE,
-          text: signalWidgetHtml(),
-          _meta: {
-            ui: {
-              prefersBorder: true,
-              domain: process.env.APP_PUBLIC_URL ?? "https://signal-an6w.onrender.com",
-              csp: {
-                connectDomains: [],
-                resourceDomains: [],
-              },
-            },
-          },
-        },
-      ],
-    }),
-  );
-
-  registerAppResource(
-    server,
-    "Signal Legacy Score Widget",
-    SIGNAL_LEGACY_WIDGET_URI,
-    {
-      description: "Legacy Signal widget URI serving the current score-only UI.",
-    },
-    async () => ({
-      contents: [
-        {
-          uri: SIGNAL_LEGACY_WIDGET_URI,
-          mimeType: RESOURCE_MIME_TYPE,
-          text: signalWidgetHtml(),
+          text: signalScoreWidgetHtml(),
           _meta: {
             ui: {
               prefersBorder: true,
@@ -261,6 +233,40 @@ export function createSignalMcpServer(): McpServer {
 
   registerAppTool(
     server,
+    "open_signal_scoreboard",
+    {
+      title: "Open Signal Scoreboard",
+      description: "Open the France vs Spain World Cup score-only view in light mode.",
+      inputSchema: {},
+      outputSchema: pulseOutputSchema,
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+      _meta: {
+        ui: { resourceUri: SIGNAL_SCORE_WIDGET_URI },
+        "openai/outputTemplate": SIGNAL_SCORE_WIDGET_URI,
+        "openai/toolInvocation/invoking": "Opening scoreboard…",
+        "openai/toolInvocation/invoked": "Scoreboard opened.",
+      },
+    },
+    async () => withToolTrace("open_signal_scoreboard", async () => {
+      const pulse = createReplaySession("replay-france-spain");
+      return {
+        structuredContent: pulse,
+        content: [
+          {
+            type: "text",
+            text: scoreText(pulse.matchState),
+          },
+        ],
+      };
+    }),
+  );
+
+  registerAppTool(
+    server,
     "open_signal_demo",
     {
       title: "Open Signal demo",
@@ -274,8 +280,8 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
       _meta: {
-        ui: { resourceUri: SIGNAL_WIDGET_URI },
-        "openai/outputTemplate": SIGNAL_WIDGET_URI,
+        ui: { resourceUri: SIGNAL_SCORE_WIDGET_URI },
+        "openai/outputTemplate": SIGNAL_SCORE_WIDGET_URI,
         "openai/toolInvocation/invoking": "Opening Signal demo…",
         "openai/toolInvocation/invoked": "Signal demo is live.",
       },
@@ -309,8 +315,8 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
       _meta: {
-        ui: { resourceUri: SIGNAL_WIDGET_URI },
-        "openai/outputTemplate": SIGNAL_WIDGET_URI,
+        ui: { resourceUri: SIGNAL_SCORE_WIDGET_URI },
+        "openai/outputTemplate": SIGNAL_SCORE_WIDGET_URI,
         "openai/toolInvocation/invoking": "Opening Signal Markets…",
         "openai/toolInvocation/invoked": "Signal Markets is live.",
       },
@@ -347,8 +353,8 @@ export function createSignalMcpServer(): McpServer {
         destructiveHint: false,
       },
       _meta: {
-        ui: { resourceUri: SIGNAL_WIDGET_URI },
-        "openai/outputTemplate": SIGNAL_WIDGET_URI,
+        ui: { resourceUri: SIGNAL_SCORE_WIDGET_URI },
+        "openai/outputTemplate": SIGNAL_SCORE_WIDGET_URI,
         "openai/toolInvocation/invoking": "Opening Signal…",
         "openai/toolInvocation/invoked": "Signal is live.",
       },
