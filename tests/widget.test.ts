@@ -1,6 +1,10 @@
 import vm from "node:vm";
 import { describe, expect, it } from "vitest";
-import { SIGNAL_SCORE_WIDGET_URI, signalScoreWidgetHtml } from "../src/server/score-widget.js";
+import {
+  SIGNAL_SCORE_WIDGET_ALIASES,
+  SIGNAL_SCORE_WIDGET_URI,
+  signalScoreWidgetHtml,
+} from "../src/server/score-widget.js";
 
 describe("Signal widget", () => {
   it("ships parseable inline JavaScript for the ChatGPT iframe", () => {
@@ -15,6 +19,7 @@ describe("Signal widget", () => {
     const html = signalScoreWidgetHtml();
 
     expect(SIGNAL_SCORE_WIDGET_URI).toBe("ui://signal/world-cup-scoreboard-20260719.html");
+    expect(SIGNAL_SCORE_WIDGET_ALIASES).toContain("ui://signal/pulse.html");
     expect(html).toContain("Match score");
     expect(html).toContain("FIFA World Cup 2026");
     expect(html).not.toContain("ui://signal/pulse.html");

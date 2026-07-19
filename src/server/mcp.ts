@@ -22,7 +22,11 @@ import {
   submitAnswer,
 } from "../store/sessions.js";
 import type { MatchState } from "../types.js";
-import { SIGNAL_SCORE_WIDGET_URI, signalScoreWidgetHtml } from "./score-widget.js";
+import {
+  SIGNAL_SCORE_WIDGET_ALIASES,
+  SIGNAL_SCORE_WIDGET_URI,
+  signalScoreWidgetHtml,
+} from "./score-widget.js";
 
 const MCP_PATH = "/mcp";
 const CORS_HEADERS =
@@ -180,6 +184,37 @@ export function createSignalMcpServer(): McpServer {
       ],
     }),
   );
+
+  for (const aliasUri of SIGNAL_SCORE_WIDGET_ALIASES) {
+    registerAppResource(
+      server,
+      "Signal Scoreboard Compatibility Template",
+      aliasUri,
+      {
+        description: "Compatibility URI serving the current score-only Signal UI.",
+      },
+      async () => ({
+        contents: [
+          {
+            uri: aliasUri,
+            mimeType: RESOURCE_MIME_TYPE,
+            text: signalScoreWidgetHtml(),
+            _meta: {
+              ui: {
+                prefersBorder: true,
+                domain: process.env.APP_PUBLIC_URL ?? "https://signal-an6w.onrender.com",
+                csp: {
+                  connectDomains: [],
+                  resourceDomains: [],
+                },
+              },
+              "openai/widgetDescription": "Shows only the World Cup match score.",
+            },
+          },
+        ],
+      }),
+    );
+  }
 
   server.registerTool(
     "list_live_matches",

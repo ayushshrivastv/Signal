@@ -1,4 +1,8 @@
 export const SIGNAL_SCORE_WIDGET_URI = "ui://signal/world-cup-scoreboard-20260719.html";
+export const SIGNAL_SCORE_WIDGET_ALIASES = [
+  "ui://signal/score-v2.html",
+  "ui://signal/pulse.html",
+] as const;
 
 export function signalScoreWidgetHtml(): string {
   return String.raw`
