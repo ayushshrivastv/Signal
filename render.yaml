@@ -11,11 +11,17 @@ services:
         value: production
       - key: SIGNAL_DEFAULT_MODE
         value: replay
-      - key: TXLINE_API_BASE_URL
+      - key: TXLINE_NETWORK
+        value: mainnet
+      - key: TXLINE_API_ORIGIN
         value: https://txline.txodds.com
       - key: APP_PUBLIC_URL
         sync: false
       - key: TXLINE_API_TOKEN
+        sync: false
+      - key: TXLINE_GUEST_JWT
+        sync: false
+      - key: TXLINE_AUTOSTART_FIXTURE_IDS
         sync: false
       - key: OPENAI_API_KEY
         sync: false

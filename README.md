@@ -13,7 +13,7 @@ It uses TxLINE scores, events, and odds as the live input layer, then turns matc
 - Dynamic challenge generation from match state.
 - Automatic answer locking and challenge resolution.
 - Devnet escrow-ready prediction metadata for short match windows.
-- TxLINE client scaffold for fixtures and SSE streams.
+- TxLINE-compatible backend client for fixtures, score snapshots, odds snapshots, historical scores, validation proofs, and background scores/odds SSE streams.
 
 ## Run Locally
 
@@ -77,11 +77,18 @@ Use:
 Copy `.env.example` to `.env` and fill TxLINE credentials when available.
 
 ```bash
-TXLINE_API_BASE_URL=https://txline.txodds.com
+TXLINE_NETWORK=mainnet
+TXLINE_API_ORIGIN=https://txline.txodds.com
 TXLINE_API_TOKEN=
+TXLINE_GUEST_JWT=
+TXLINE_AUTOSTART_FIXTURE_IDS=
 ```
 
-Without `TXLINE_API_TOKEN`, Signal still runs the replay demo.
+`TXLINE_API_TOKEN` is the activated API token returned by TxLINE `/api/token/activate` and is sent as `X-Api-Token`. `TXLINE_GUEST_JWT` is optional; if omitted, Signal requests a fresh guest JWT from `/auth/guest/start` and sends it as `Authorization: Bearer <jwt>`.
+
+Without `TXLINE_API_TOKEN`, Signal still runs the replay demo and clearly reports that live TxLINE mode is not configured.
+
+Set `TXLINE_AUTOSTART_FIXTURE_IDS` to a comma-separated list of TxLINE fixture IDs when you want Render to start score and odds background streams on boot.
 
 ## Compliance
 

@@ -8,12 +8,14 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { replayMatches } from "../txline/replay.js";
-import { createTxLineClientFromEnv } from "../txline/client.js";
+import { txLineLiveEngine } from "../txline/live-engine.js";
 import {
   connectPredictionWallet,
+  createLiveSession,
   createReplaySession,
   getSessionPulse,
   getSpokenSummary,
+  getTxLineLiveHealth,
   lockPredictionPosition,
   quotePredictionPosition,
   resolveSessionPulse,
@@ -126,6 +128,15 @@ const predictionSchema = z.object({
   complianceNote: z.string(),
 });
 
+const txLineHealthSchema = z.object({
+  fixtureId: z.string(),
+  scoresStatus: z.enum(["idle", "connecting", "open", "error"]),
+  oddsStatus: z.enum(["idle", "connecting", "open", "error"]),
+  lastScoresAt: z.string().optional(),
+  lastOddsAt: z.string().optional(),
+  lastError: z.string().optional(),
+});
+
 const pulseOutputSchema = {
   sessionId: z.string(),
   matchState: matchStateSchema,
@@ -197,9 +208,9 @@ export function createSignalMcpServer(): McpServer {
     async () => withToolTrace("list_live_matches", async () => {
       const matches = [...replayMatches];
 
-      if (process.env.TXLINE_API_TOKEN) {
+      if (txLineLiveEngine.isConfigured) {
         try {
-          const txlineMatches = await createTxLineClientFromEnv().listFixtures();
+          const txlineMatches = await txLineLiveEngine.listFixtures();
           matches.unshift(...txlineMatches);
         } catch (error) {
           console.warn("Unable to fetch TxLINE fixtures; keeping replay fixtures.", error);
@@ -313,11 +324,7 @@ export function createSignalMcpServer(): McpServer {
       },
     },
     async ({ fixtureId, mode }) => withToolTrace("open_match", async () => {
-      if (mode !== "replay") {
-        throw new Error("Live mode is scaffolded but replay mode is the current working MVP.");
-      }
-
-      const pulse = createReplaySession(fixtureId);
+      const pulse = mode === "live" ? await createLiveSession(fixtureId) : createReplaySession(fixtureId);
       return {
         structuredContent: pulse,
         content: [
@@ -352,6 +359,42 @@ export function createSignalMcpServer(): McpServer {
         content: [{ type: "text", text: pulse.challenge.question }],
       };
     }),
+  );
+
+  server.registerTool(
+    "get_txline_live_health",
+    {
+      title: "Get TxLINE live health",
+      description:
+        "Return background TxLINE scores and odds stream health for opened live fixtures.",
+      inputSchema: {
+        fixtureId: z.string().min(1).optional(),
+      },
+      outputSchema: {
+        configured: z.boolean(),
+        health: z.array(txLineHealthSchema),
+      },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      },
+    },
+    async ({ fixtureId }) =>
+      withToolTrace("get_txline_live_health", async () => ({
+        structuredContent: {
+          configured: txLineLiveEngine.isConfigured,
+          health: getTxLineLiveHealth(fixtureId),
+        },
+        content: [
+          {
+            type: "text",
+            text: txLineLiveEngine.isConfigured
+              ? "TxLINE live engine is configured. Open a live fixture to start background scores and odds streams."
+              : "TxLINE live engine is not configured because TXLINE_API_TOKEN is missing.",
+          },
+        ],
+      })),
   );
 
   server.registerTool(
@@ -555,6 +598,7 @@ export function startHttpServer(): void {
   httpServer.listen(port, () => {
     console.log(`Signal MCP server listening on http://localhost:${port}`);
     console.log(`MCP endpoint: http://localhost:${port}${MCP_PATH}`);
+    startConfiguredTxLineStreams();
   });
 }
 
@@ -599,7 +643,15 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   if (req.method === "GET" && url.pathname === "/health") {
-    writeJson(res, 200, { ok: true, service: "signal", mode: process.env.SIGNAL_DEFAULT_MODE ?? "replay" });
+    writeJson(res, 200, {
+      ok: true,
+      service: "signal",
+      mode: process.env.SIGNAL_DEFAULT_MODE ?? "replay",
+      txline: {
+        configured: txLineLiveEngine.isConfigured,
+        health: getTxLineLiveHealth(),
+      },
+    });
     return;
   }
 
@@ -729,4 +781,30 @@ async function withToolTrace<T>(name: string, fn: () => Promise<T>): Promise<T> 
 function recordToolCall(entry: Record<string, string | number | boolean | undefined>): void {
   recentToolCalls.push(entry);
   while (recentToolCalls.length > 80) recentToolCalls.shift();
+}
+
+function startConfiguredTxLineStreams(): void {
+  const fixtureIds = (process.env.TXLINE_AUTOSTART_FIXTURE_IDS ?? "")
+    .split(",")
+    .map((fixtureId) => fixtureId.trim())
+    .filter(Boolean);
+
+  if (fixtureIds.length === 0) return;
+
+  if (!txLineLiveEngine.isConfigured) {
+    console.warn("TXLINE_AUTOSTART_FIXTURE_IDS is set, but TXLINE_API_TOKEN is missing.");
+    return;
+  }
+
+  for (const fixtureId of fixtureIds) {
+    void txLineLiveEngine
+      .openFixture(fixtureId)
+      .then(() => console.log(`Started TxLINE background streams for fixture ${fixtureId}`))
+      .catch((error) => {
+        console.warn(
+          `Unable to start TxLINE background streams for fixture ${fixtureId}:`,
+          error,
+        );
+      });
+  }
 }

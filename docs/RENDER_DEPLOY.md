@@ -13,11 +13,17 @@ Signal runs as a long-lived Node web service. Render is a good free hackathon de
 
 ```text
 APP_PUBLIC_URL=https://YOUR-SERVICE.onrender.com
+TXLINE_NETWORK=mainnet
+TXLINE_API_ORIGIN=https://txline.txodds.com
 TXLINE_API_TOKEN=
+TXLINE_GUEST_JWT=
+TXLINE_AUTOSTART_FIXTURE_IDS=
 OPENAI_API_KEY=
 ```
 
-`TXLINE_API_TOKEN` and `OPENAI_API_KEY` can stay blank for the replay demo.
+`TXLINE_API_TOKEN` and `OPENAI_API_KEY` can stay blank for the replay demo. Live TxLINE mode requires an activated TxLINE API token from the official subscription/activation flow. `TXLINE_GUEST_JWT` is optional because Signal can request a fresh guest JWT from `/auth/guest/start`.
+
+Use `TXLINE_AUTOSTART_FIXTURE_IDS=18257739` or another comma-separated fixture list when you want Render to start live scores and odds background streams on boot.
 
 ## Option B: Manual Web Service
 
@@ -35,9 +41,12 @@ Environment variables:
 ```text
 NODE_ENV=production
 SIGNAL_DEFAULT_MODE=replay
-TXLINE_API_BASE_URL=https://txline.txodds.com
 APP_PUBLIC_URL=https://YOUR-SERVICE.onrender.com
+TXLINE_NETWORK=mainnet
+TXLINE_API_ORIGIN=https://txline.txodds.com
 TXLINE_API_TOKEN=
+TXLINE_GUEST_JWT=
+TXLINE_AUTOSTART_FIXTURE_IDS=
 OPENAI_API_KEY=
 ```
 
@@ -66,4 +75,3 @@ Open Signal for the England vs Croatia replay match.
 ## Free Plan Caveat
 
 Render free web services can sleep. For the hackathon demo video, open `/health` once before recording so the service wakes up.
-

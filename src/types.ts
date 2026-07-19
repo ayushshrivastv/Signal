@@ -42,6 +42,7 @@ export type MatchState = {
   fixtureId: string;
   homeTeam: string;
   awayTeam: string;
+  participant1IsHome?: boolean;
   minute: number;
   phase: MatchPhase;
   score: {
@@ -58,6 +59,9 @@ export type LiveMatchSummary = {
   fixtureId: string;
   homeTeam: string;
   awayTeam: string;
+  participant1IsHome?: boolean;
+  startTime?: string;
+  competition?: string;
   status: "live" | "upcoming" | "finished" | "replay";
   minute?: number;
   score?: string;
@@ -143,6 +147,15 @@ export type SignalSession = {
   streak: number;
   replayIndex: number;
   lastResult?: PulseResult;
+};
+
+export type TxLineStreamHealth = {
+  fixtureId: string;
+  scoresStatus: "idle" | "connecting" | "open" | "error";
+  oddsStatus: "idle" | "connecting" | "open" | "error";
+  lastScoresAt?: string;
+  lastOddsAt?: string;
+  lastError?: string;
 };
 
 export type SignalHighlight = {

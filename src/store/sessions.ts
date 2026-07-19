@@ -7,6 +7,7 @@ import {
 } from "../markets/predictions.js";
 import { createPulseChallenge, explainMarket } from "../pulse/challenge-generator.js";
 import { resolveChallenge } from "../pulse/resolver.js";
+import { txLineLiveEngine } from "../txline/live-engine.js";
 import { getNextReplayState, getReplayInitialState } from "../txline/replay.js";
 
 const sessions = new Map<string, SignalSession>();
@@ -27,8 +28,25 @@ export function createReplaySession(fixtureId: string): SignalPulse {
   return toPulse(session);
 }
 
+export async function createLiveSession(fixtureId: string): Promise<SignalPulse> {
+  const matchState = await txLineLiveEngine.openFixture(fixtureId);
+  const session: SignalSession = {
+    id: `session-${crypto.randomUUID()}`,
+    fixtureId,
+    mode: "live",
+    matchState,
+    challenge: createPulseChallenge(matchState),
+    streak: 0,
+    replayIndex: 0,
+  };
+
+  sessions.set(session.id, session);
+  return toPulse(session);
+}
+
 export function getSessionPulse(sessionId: string): SignalPulse {
   const session = requireSession(sessionId);
+  refreshLiveSession(session);
   return toPulse(session);
 }
 
@@ -43,6 +61,7 @@ export function quotePredictionPosition(
   },
 ): SignalPulse {
   const session = requireSession(sessionId);
+  refreshLiveSession(session);
   session.prediction = createPredictionQuote(session.matchState, {
     team: input.team,
     prediction: input.prediction ?? "YES",
@@ -109,9 +128,13 @@ export function resolveSessionPulse(sessionId: string, challengeId: string): Sig
   }
 
   const previousState = session.matchState;
-  const next = getNextReplayState(session.fixtureId, session.replayIndex);
-  session.matchState = next.state;
-  session.replayIndex = next.index;
+  if (session.mode === "live") {
+    refreshLiveSession(session);
+  } else {
+    const next = getNextReplayState(session.fixtureId, session.replayIndex);
+    session.matchState = next.state;
+    session.replayIndex = next.index;
+  }
 
   const result = resolveChallenge(session.challenge, previousState, session.matchState);
   session.lastResult = result;
@@ -129,6 +152,7 @@ export function resolveSessionPulse(sessionId: string, challengeId: string): Sig
 
 export function getSpokenSummary(sessionId: string): { script: string } {
   const session = requireSession(sessionId);
+  refreshLiveSession(session);
   const score = `${session.matchState.score.home}-${session.matchState.score.away}`;
   const resultLine = session.lastResult?.result
     ? `${session.lastResult.result} ${session.lastResult.correct ? "Your read was right." : "That one went the other way."}`
@@ -139,10 +163,20 @@ export function getSpokenSummary(sessionId: string): { script: string } {
   };
 }
 
+export function getTxLineLiveHealth(fixtureId?: string) {
+  return txLineLiveEngine.getHealth(fixtureId);
+}
+
 function requireSession(sessionId: string): SignalSession {
   const session = sessions.get(sessionId);
   if (!session) throw new Error(`Unknown Signal session: ${sessionId}`);
   return session;
+}
+
+function refreshLiveSession(session: SignalSession): void {
+  if (session.mode !== "live") return;
+  const latest = txLineLiveEngine.getState(session.fixtureId);
+  if (latest) session.matchState = latest;
 }
 
 function toPulse(session: SignalSession): SignalPulse {
