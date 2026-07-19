@@ -28,6 +28,7 @@ const CORS_HEADERS =
   "authorization, content-type, mcp-session-id, openai-conversation-id, openai-ephemeral-user-id, openai-locale, x-openai-conversation-id, x-openai-ephemeral-user-id, x-openai-locale";
 const recentRequests: Array<Record<string, string | undefined>> = [];
 const recentToolCalls: Array<Record<string, string | number | boolean | undefined>> = [];
+const recentTxLineStartupEvents: Array<Record<string, string | boolean | undefined>> = [];
 
 const eventSchema = z.object({
   id: z.string(),
@@ -649,7 +650,11 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse): 
       mode: process.env.SIGNAL_DEFAULT_MODE ?? "replay",
       txline: {
         configured: txLineLiveEngine.isConfigured,
+        network: txLineLiveEngine.network,
+        apiOrigin: txLineLiveEngine.origin,
+        autostartFixtureIds: txLineAutostartFixtureIds(),
         health: getTxLineLiveHealth(),
+        startupEvents: recentTxLineStartupEvents.slice(-5),
       },
     });
     return;
@@ -784,27 +789,54 @@ function recordToolCall(entry: Record<string, string | number | boolean | undefi
 }
 
 function startConfiguredTxLineStreams(): void {
-  const fixtureIds = (process.env.TXLINE_AUTOSTART_FIXTURE_IDS ?? "")
-    .split(",")
-    .map((fixtureId) => fixtureId.trim())
-    .filter(Boolean);
+  const fixtureIds = txLineAutostartFixtureIds();
 
   if (fixtureIds.length === 0) return;
 
   if (!txLineLiveEngine.isConfigured) {
     console.warn("TXLINE_AUTOSTART_FIXTURE_IDS is set, but TXLINE_API_TOKEN is missing.");
+    recordTxLineStartupEvent({
+      at: new Date().toISOString(),
+      ok: false,
+      error: "TXLINE_API_TOKEN is missing.",
+    });
     return;
   }
 
   for (const fixtureId of fixtureIds) {
     void txLineLiveEngine
       .openFixture(fixtureId)
-      .then(() => console.log(`Started TxLINE background streams for fixture ${fixtureId}`))
+      .then(() => {
+        console.log(`Started TxLINE background streams for fixture ${fixtureId}`);
+        recordTxLineStartupEvent({
+          at: new Date().toISOString(),
+          fixtureId,
+          ok: true,
+        });
+      })
       .catch((error) => {
         console.warn(
           `Unable to start TxLINE background streams for fixture ${fixtureId}:`,
           error,
         );
+        recordTxLineStartupEvent({
+          at: new Date().toISOString(),
+          fixtureId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
       });
   }
+}
+
+function txLineAutostartFixtureIds(): string[] {
+  return (process.env.TXLINE_AUTOSTART_FIXTURE_IDS ?? "")
+    .split(",")
+    .map((fixtureId) => fixtureId.trim())
+    .filter(Boolean);
+}
+
+function recordTxLineStartupEvent(entry: Record<string, string | boolean | undefined>): void {
+  recentTxLineStartupEvents.push(entry);
+  while (recentTxLineStartupEvents.length > 20) recentTxLineStartupEvents.shift();
 }

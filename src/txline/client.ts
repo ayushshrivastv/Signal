@@ -38,6 +38,10 @@ export class TxLineClient {
     return this.apiOrigin;
   }
 
+  get selectedNetwork(): TxLineNetwork {
+    return this.network;
+  }
+
   async listFixtures(params?: Record<string, string | number | boolean>): Promise<LiveMatchSummary[]> {
     const data = await this.fetchJson<unknown>("/api/fixtures/snapshot", params);
     const items = Array.isArray(data) ? data : pickArray(data);

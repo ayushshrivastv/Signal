@@ -31,6 +31,14 @@ export class TxLineLiveEngine {
     return this.client.isConfigured;
   }
 
+  get network(): string {
+    return this.client.selectedNetwork;
+  }
+
+  get origin(): string {
+    return this.client.origin;
+  }
+
   async listFixtures(): Promise<LiveMatchSummary[]> {
     return this.client.listFixtures();
   }
