@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { LiveMatchSummary } from "../types.js";
 import { normalizeFixture } from "./normalizer.js";
 
@@ -40,6 +41,15 @@ export class TxLineClient {
 
   get selectedNetwork(): TxLineNetwork {
     return this.network;
+  }
+
+  get tokenFingerprint(): string | undefined {
+    if (!this.apiToken) return undefined;
+    return createHash("sha256").update(this.apiToken).digest("hex").slice(0, 12);
+  }
+
+  get tokenLength(): number {
+    return this.apiToken?.length ?? 0;
   }
 
   async listFixtures(params?: Record<string, string | number | boolean>): Promise<LiveMatchSummary[]> {
@@ -99,7 +109,7 @@ export class TxLineClient {
     });
 
     if (!response.ok || !response.body) {
-      throw new Error(`TxLINE stream failed ${response.status}: ${response.statusText}`);
+      throw new Error(await txLineResponseError("TxLINE stream failed", response));
     }
 
     for await (const message of readSseMessages(response)) {
@@ -122,7 +132,7 @@ export class TxLineClient {
     const response = await this.request(path, { params });
 
     if (!response.ok) {
-      throw new Error(`TxLINE request failed ${response.status}: ${response.statusText}`);
+      throw new Error(await txLineResponseError("TxLINE request failed", response));
     }
 
     const text = await response.text();
@@ -302,4 +312,10 @@ function cleanOptionalEnvValue(value: string | undefined): string | undefined {
 
 function cleanEnvValue(value: string): string {
   return value.trim().replace(/^['"]|['"]$/g, "");
+}
+
+async function txLineResponseError(prefix: string, response: Response): Promise<string> {
+  const body = await response.text().catch(() => "");
+  const bodySuffix = body.trim() ? ` - ${body.trim().slice(0, 240)}` : "";
+  return `${prefix} ${response.status}: ${response.statusText}${bodySuffix}`;
 }

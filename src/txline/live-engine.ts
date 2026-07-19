@@ -39,6 +39,14 @@ export class TxLineLiveEngine {
     return this.client.origin;
   }
 
+  get tokenFingerprint(): string | undefined {
+    return this.client.tokenFingerprint;
+  }
+
+  get tokenLength(): number {
+    return this.client.tokenLength;
+  }
+
   async listFixtures(): Promise<LiveMatchSummary[]> {
     return this.client.listFixtures();
   }

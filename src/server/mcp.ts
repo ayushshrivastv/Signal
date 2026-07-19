@@ -652,6 +652,8 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse): 
         configured: txLineLiveEngine.isConfigured,
         network: txLineLiveEngine.network,
         apiOrigin: txLineLiveEngine.origin,
+        tokenLength: txLineLiveEngine.tokenLength,
+        tokenFingerprint: txLineLiveEngine.tokenFingerprint,
         autostartFixtureIds: txLineAutostartFixtureIds(),
         health: getTxLineLiveHealth(),
         startupEvents: recentTxLineStartupEvents.slice(-5),
