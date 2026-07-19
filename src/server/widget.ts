@@ -10,17 +10,14 @@ export function signalWidgetHtml(): string {
     <title>Signal</title>
     <style>
       :root {
-        color-scheme: light dark;
-        --bg: #0f1115;
-        --panel: #171a21;
-        --panel-2: #20242d;
-        --text: #f3f5f7;
-        --muted: #a9b0bd;
-        --line: #303642;
-        --accent: #56d6a5;
-        --warn: #f5c451;
-        --bad: #ef6b73;
-        --good: #74d99f;
+        color-scheme: light;
+        --bg: #ffffff;
+        --panel: #f7f7f5;
+        --text: #1f2024;
+        --muted: #777a80;
+        --soft: #a4a7ad;
+        --line: #e4e4e2;
+        --flag-ring: #ffffff;
       }
 
       * {
@@ -37,227 +34,140 @@ export function signalWidgetHtml(): string {
         letter-spacing: 0;
       }
 
-      button {
-        min-height: 42px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--panel-2);
-        color: var(--text);
-        font: inherit;
-        cursor: pointer;
-      }
-
-      button:hover {
-        border-color: var(--accent);
-      }
-
-      button:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
-
-      button:disabled {
-        cursor: not-allowed;
-        opacity: 0.65;
-      }
-
       .app {
-        display: grid;
-        gap: 12px;
-        padding: 14px;
-      }
-
-      .match-card,
-      .panel {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--panel);
+        padding: 0;
       }
 
       .match-card {
         display: grid;
-        gap: 14px;
-        padding: 14px;
+        gap: 26px;
+        min-height: 230px;
+        padding: 20px 26px 26px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
       }
 
       .match-meta {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
-        color: var(--muted);
-        font-size: 12px;
+        gap: 16px;
+        color: var(--text);
+        font-size: 18px;
         font-weight: 700;
+      }
+
+      .competition {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .date {
+        color: var(--muted);
+      }
+
+      .status {
+        flex: 0 0 auto;
       }
 
       .scoreboard {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        grid-template-columns: minmax(112px, 1fr) auto minmax(112px, 1fr);
         align-items: center;
-        gap: 14px;
+        gap: 42px;
       }
 
       .team {
         display: grid;
-        gap: 7px;
-        justify-items: start;
+        gap: 16px;
+        justify-items: center;
         min-width: 0;
       }
 
       .team:last-child {
-        justify-items: end;
         text-align: right;
       }
 
       .flag {
-        width: 38px;
-        height: 28px;
-        border: 2px solid rgba(255, 255, 255, 0.78);
+        width: 62px;
+        height: 44px;
+        border: 3px solid var(--flag-ring);
         border-radius: 6px;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12) inset;
-      }
-
-      .flag.home {
-        background: linear-gradient(90deg, #193a9a 0 33%, #ffffff 33% 66%, #ef3340 66%);
-      }
-
-      .flag.away {
-        background: linear-gradient(#c60b1e 0 25%, #ffc400 25% 75%, #c60b1e 75%);
+        box-shadow:
+          0 0 0 1px rgba(20, 22, 28, 0.14),
+          0 2px 5px rgba(20, 22, 28, 0.12);
       }
 
       .name {
+        max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 14px;
+        font-size: 22px;
         font-weight: 700;
-      }
-
-      .prob {
-        color: var(--muted);
-        font-size: 12px;
       }
 
       .score {
         display: grid;
         justify-items: center;
-        gap: 5px;
+        gap: 28px;
       }
 
       .score strong {
-        font-size: 36px;
+        color: var(--soft);
+        font-size: 54px;
+        font-weight: 500;
         line-height: 1;
       }
 
-      .minute {
-        color: var(--accent);
-        font-size: 12px;
+      .stage {
+        color: var(--muted);
+        font-size: 19px;
         font-weight: 700;
       }
 
-      .panel {
-        display: grid;
-        gap: 10px;
-        padding: 12px;
-      }
-
-      .label {
-        color: var(--muted);
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-      }
-
-      .explanation,
-      .context,
-      .result,
-      .position {
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.45;
-      }
-
-      .question {
-        font-size: 18px;
-        font-weight: 750;
-        line-height: 1.25;
-      }
-
-      .actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-      }
-
-      .primary {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #08110d;
-        font-weight: 750;
-      }
-
-      .secondary {
-        font-weight: 700;
-      }
-
-      .meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .pill {
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        color: var(--muted);
-        font-size: 12px;
-        padding: 5px 8px;
-      }
-
-      .pill.good {
-        color: var(--good);
-      }
-
-      .pill.bad {
-        color: var(--bad);
-      }
-
-      .feed {
-        display: grid;
-        gap: 8px;
-      }
-
-      .event,
-      .highlight {
-        border-left: 2px solid var(--accent);
-        padding-left: 8px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.35;
-      }
-
-      .highlight strong {
-        color: var(--text);
-        display: block;
-        font-size: 11px;
-        margin-bottom: 2px;
-        text-transform: uppercase;
-      }
-
-      .empty {
-        color: var(--muted);
-        font-size: 13px;
-        padding: 10px 0;
-      }
-
-      @media (max-width: 420px) {
-        .scoreboard {
-          grid-template-columns: 1fr;
+      @media (max-width: 560px) {
+        .match-card {
+          gap: 22px;
+          min-height: 210px;
+          padding: 16px 18px 22px;
         }
 
-        .team,
-        .team:last-child {
-          text-align: center;
+        .match-meta {
+          align-items: flex-start;
+          font-size: 15px;
+        }
+
+        .scoreboard {
+          grid-template-columns: minmax(72px, 1fr) auto minmax(72px, 1fr);
+          gap: 16px;
+        }
+
+        .team {
+          gap: 12px;
+        }
+
+        .flag {
+          width: 48px;
+          height: 34px;
+        }
+
+        .name {
+          font-size: 17px;
+        }
+
+        .score {
+          gap: 20px;
+        }
+
+        .score strong {
+          font-size: 38px;
+        }
+
+        .stage {
+          font-size: 15px;
         }
       }
     </style>
@@ -266,69 +176,26 @@ export function signalWidgetHtml(): string {
     <main class="app" aria-live="polite">
       <section class="match-card" aria-label="Match score">
         <div class="match-meta">
-          <span id="competition">FIFA World Cup 2026</span>
-          <span id="status">Replay</span>
+          <span class="competition">
+            <span id="competition">FIFA World Cup 2026™</span>
+            <span class="date" id="dateLabel">· Signal match</span>
+          </span>
+          <span class="status" id="status">Replay</span>
         </div>
         <div class="scoreboard">
           <div class="team">
             <span class="flag" id="homeFlag" aria-hidden="true"></span>
             <span class="name" id="homeName">Home</span>
-            <span class="prob" id="homeProb">--</span>
           </div>
           <div class="score">
             <strong id="score">0-0</strong>
-            <span class="minute" id="minute">--'</span>
+            <span class="stage" id="stage">Match</span>
           </div>
           <div class="team">
             <span class="flag" id="awayFlag" aria-hidden="true"></span>
             <span class="name" id="awayName">Away</span>
-            <span class="prob" id="awayProb">--</span>
           </div>
         </div>
-      </section>
-
-      <section class="panel" aria-label="Recent TxLINE highlights">
-        <div class="label">Recent highlights</div>
-        <div class="feed" id="highlights"></div>
-      </section>
-
-      <section class="panel" aria-label="Market pulse">
-        <div class="label">Market pulse</div>
-        <div class="explanation" id="market">Waiting for Signal data.</div>
-        <div class="meta">
-          <span class="pill" id="mode">Replay</span>
-          <span class="pill" id="streak">Streak 0</span>
-        </div>
-      </section>
-
-      <section class="panel" aria-label="Prediction position">
-        <div class="label">Signal market</div>
-        <div class="question" id="positionTitle">No open position</div>
-        <div class="position" id="positionState">Waiting for market intent.</div>
-        <div class="meta">
-          <span class="pill" id="stakeLine">Stake --</span>
-          <span class="pill" id="settlementLine">TxLINE settlement</span>
-        </div>
-      </section>
-
-      <section class="panel" aria-label="Pulse challenge">
-        <div class="label">Fan pulse</div>
-        <div class="context" id="context">Waiting for the current match story.</div>
-        <div class="question" id="question">Open a match to start Signal.</div>
-        <div class="actions">
-          <button class="primary" id="yesButton" type="button">Yes</button>
-          <button class="secondary" id="noButton" type="button">No</button>
-        </div>
-        <div class="result" id="result"></div>
-        <div class="actions">
-          <button id="resolveButton" type="button">Resolve next signal</button>
-          <button id="speakButton" type="button">Read summary</button>
-        </div>
-      </section>
-
-      <section class="panel" aria-label="Recent TxLINE signals">
-        <div class="label">Recent TxLINE signals</div>
-        <div class="feed" id="feed"></div>
       </section>
     </main>
 
@@ -338,141 +205,50 @@ export function signalWidgetHtml(): string {
       const pendingRequests = new Map();
 
       const els = {
-        competition: document.getElementById("competition"),
+        dateLabel: document.getElementById("dateLabel"),
         status: document.getElementById("status"),
         homeFlag: document.getElementById("homeFlag"),
         awayFlag: document.getElementById("awayFlag"),
         homeName: document.getElementById("homeName"),
         awayName: document.getElementById("awayName"),
-        homeProb: document.getElementById("homeProb"),
-        awayProb: document.getElementById("awayProb"),
         score: document.getElementById("score"),
-        minute: document.getElementById("minute"),
-        market: document.getElementById("market"),
-        mode: document.getElementById("mode"),
-        streak: document.getElementById("streak"),
-        context: document.getElementById("context"),
-        question: document.getElementById("question"),
-        result: document.getElementById("result"),
-        highlights: document.getElementById("highlights"),
-        feed: document.getElementById("feed"),
-        positionTitle: document.getElementById("positionTitle"),
-        positionState: document.getElementById("positionState"),
-        stakeLine: document.getElementById("stakeLine"),
-        settlementLine: document.getElementById("settlementLine"),
-        yesButton: document.getElementById("yesButton"),
-        noButton: document.getElementById("noButton"),
-        resolveButton: document.getElementById("resolveButton"),
-        speakButton: document.getElementById("speakButton"),
+        stage: document.getElementById("stage"),
       };
-
-      function probability(value) {
-        return typeof value === "number" ? value.toFixed(0) + "% implied" : "--";
-      }
 
       function render(nextPulse) {
         pulse = nextPulse ?? pulse;
         if (!pulse?.matchState) return;
 
         const state = pulse.matchState;
-        els.status.textContent = state.phase === "fulltime" ? "Full-time" : state.mode === "replay" ? "Replay" : "Live";
+        els.dateLabel.textContent = "· " + matchDateLabel(state);
+        els.status.textContent = statusLabel(state);
         els.homeFlag.style.background = flagBackground(state.homeTeam, "home");
         els.awayFlag.style.background = flagBackground(state.awayTeam, "away");
         els.homeName.textContent = state.homeTeam;
         els.awayName.textContent = state.awayTeam;
-        els.homeProb.textContent = probability(state.latestOdds?.homeProbability);
-        els.awayProb.textContent = probability(state.latestOdds?.awayProbability);
         els.score.textContent = state.score.home + "-" + state.score.away;
-        els.minute.textContent = state.phase === "fulltime" ? "FT" : state.minute + "'";
-        els.market.textContent = pulse.marketExplanation;
-        els.mode.textContent = state.mode === "replay" ? "Replay mode" : "Live mode";
-        els.streak.textContent = "Streak " + pulse.streak;
-        els.context.textContent = pulse.challenge?.context ?? "";
-        els.question.textContent = pulse.challenge?.question ?? "";
-
-        const answer = pulse.challenge?.userAnswer;
-        const locked = pulse.challenge?.status === "locked";
-        els.yesButton.disabled = Boolean(answer);
-        els.noButton.disabled = Boolean(answer);
-        els.yesButton.textContent = answer === "Yes" ? "Yes locked" : "Yes";
-        els.noButton.textContent = answer === "No" ? "No locked" : "No";
-        els.resolveButton.disabled = !locked;
-
-        if (pulse.lastResult?.resolved) {
-          const correctness = pulse.lastResult.correct ? "Correct" : "Missed";
-          els.result.textContent = correctness + ": " + pulse.lastResult.result;
-        } else if (locked) {
-          els.result.textContent = "Answer locked. Waiting for the next TxLINE signal.";
-        } else {
-          els.result.textContent = "Pick before the next signal arrives.";
-        }
-
-        renderHighlights(pulse.highlights ?? []);
-        renderPosition(pulse.prediction);
-
-        els.feed.innerHTML = "";
-        const events = state.recentEvents ?? [];
-        if (events.length === 0) {
-          const empty = document.createElement("div");
-          empty.className = "empty";
-          empty.textContent = "No match signals yet.";
-          els.feed.appendChild(empty);
-          return;
-        }
-
-        for (const event of events.slice(-4).reverse()) {
-          const row = document.createElement("div");
-          row.className = "event";
-          row.textContent = event.minute + "' " + event.description;
-          els.feed.appendChild(row);
-        }
+        els.stage.textContent = stageLabel(state);
       }
 
-      function renderHighlights(highlights) {
-        els.highlights.innerHTML = "";
-        if (highlights.length === 0) {
-          const empty = document.createElement("div");
-          empty.className = "empty";
-          empty.textContent = "Waiting for TxLINE highlights.";
-          els.highlights.appendChild(empty);
-          return;
-        }
-
-        for (const highlight of highlights.slice(0, 3)) {
-          const row = document.createElement("div");
-          row.className = "highlight";
-          const label = document.createElement("strong");
-          label.textContent = highlight.label;
-          const text = document.createElement("span");
-          text.textContent = highlight.text;
-          row.append(label, text);
-          els.highlights.appendChild(row);
-        }
+      function statusLabel(state) {
+        if (state.phase === "fulltime") return "Full-time";
+        if (state.phase === "halftime") return "Half-time";
+        if (state.phase === "pre_match") return "Upcoming";
+        return state.minute ? state.minute + "'" : state.mode === "live" ? "Live" : "Replay";
       }
 
-      function renderPosition(position) {
-        if (!position) {
-          els.positionTitle.textContent = "No open position";
-          els.positionState.textContent = "Waiting for market intent.";
-          els.stakeLine.textContent = "Stake --";
-          els.settlementLine.textContent = "TxLINE settlement";
-          return;
-        }
-
-        els.positionTitle.textContent = position.prediction + " - " + position.marketLabel;
-        els.positionState.textContent =
-          position.status === "locked"
-            ? "Locked with signature " + shortText(position.txSignature)
-            : position.walletAddress
-              ? "Wallet attached. Ready for the user to sign the devnet escrow transaction."
-              : "Quote prepared. Wallet address is needed before signing.";
-        els.stakeLine.textContent = position.stakeUsd + " " + position.asset + " until " + position.expiryMinute + "'";
-        els.settlementLine.textContent = position.network + " escrow";
+      function stageLabel(state) {
+        const teams = [state.homeTeam, state.awayTeam].sort().join("-");
+        if (teams === "France-Spain") return "Semi-finals";
+        if (state.phase === "halftime") return "Half-time";
+        if (state.phase === "pre_match") return "Kick-off soon";
+        return state.mode === "live" ? "Live match" : "Replay match";
       }
 
-      function shortText(value) {
-        if (!value) return "";
-        return value.length > 14 ? value.slice(0, 6) + "..." + value.slice(-6) : value;
+      function matchDateLabel(state) {
+        const teams = [state.homeTeam, state.awayTeam].sort().join("-");
+        if (teams === "France-Spain") return "Wed, 15 Jul";
+        return state.mode === "live" ? "TxLINE live" : "Replay";
       }
 
       function flagBackground(teamName, side) {
@@ -481,6 +257,8 @@ export function signalWidgetHtml(): string {
           Spain: "linear-gradient(#c60b1e 0 25%, #ffc400 25% 75%, #c60b1e 75%)",
           England: "linear-gradient(90deg, #ffffff 0 42%, #c8102e 42% 58%, #ffffff 58%)",
           Croatia: "linear-gradient(#ff0000 0 33%, #ffffff 33% 66%, #171796 66%)",
+          Argentina: "linear-gradient(#74acdf 0 33%, #ffffff 33% 66%, #74acdf 66%)",
+          Brazil: "linear-gradient(135deg, #009b3a 0 42%, #ffdf00 42% 58%, #002776 58%)",
         };
 
         return flags[teamName] ?? (side === "home" ? "#2b65f6" : "#ef6b73");
@@ -531,54 +309,14 @@ export function signalWidgetHtml(): string {
         { passive: true },
       );
 
-      const bridgeReady = (async () => {
+      (async () => {
         await rpcRequest("ui/initialize", {
-          appInfo: { name: "signal-widget", version: "0.1.0" },
+          appInfo: { name: "signal-score-widget", version: "0.2.0" },
           appCapabilities: {},
           protocolVersion: "2026-01-26",
         });
         rpcNotify("ui/notifications/initialized", {});
       })();
-
-      async function callTool(name, args) {
-        await bridgeReady;
-        const response = await rpcRequest("tools/call", {
-          name,
-          arguments: args,
-        });
-        updateFromResponse(response);
-        return response;
-      }
-
-      async function answer(value) {
-        if (!pulse?.sessionId || !pulse?.challenge?.id) return;
-        await callTool("submit_answer", {
-          sessionId: pulse.sessionId,
-          challengeId: pulse.challenge.id,
-          answer: value,
-        });
-      }
-
-      els.yesButton.addEventListener("click", () => answer("Yes"));
-      els.noButton.addEventListener("click", () => answer("No"));
-      els.resolveButton.addEventListener("click", async () => {
-        if (!pulse?.sessionId || !pulse?.challenge?.id) return;
-        await callTool("resolve_pulse", {
-          sessionId: pulse.sessionId,
-          challengeId: pulse.challenge.id,
-        });
-      });
-      els.speakButton.addEventListener("click", async () => {
-        if (!pulse?.sessionId) return;
-        const response = await callTool("get_spoken_summary", {
-          sessionId: pulse.sessionId,
-        });
-        const script = response?.structuredContent?.script;
-        if (script && "speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(new SpeechSynthesisUtterance(script));
-        }
-      });
 
       render(pulse);
     </script>
